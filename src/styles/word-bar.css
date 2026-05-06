@@ -1,0 +1,155 @@
+.word-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  min-height: 3rem;
+}
+
+.word-bar .btn.primary {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.possible-words,
+.your-words {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+}
+
+.pw-count {
+  font-family: var(--font-mono);
+  color: var(--c-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.found-words {
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--c-fg);
+  word-spacing: 0.35em;
+}
+
+.found-words .fw-long {
+  color: var(--c-accent);
+}
+
+.found-words .fw-latest {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.current-word {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--c-fg);
+  text-transform: uppercase;
+  word-break: break-all;
+  min-height: 1.6rem;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+}
+
+.current-word.invalid {
+  color: var(--c-bad);
+}
+
+.cw-placeholder {
+  color: var(--c-muted);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Default: show the desktop hint ("tap, type, or slide"), hide the touch one. */
+.cw-hint-touch {
+  display: none;
+}
+
+/* Coarse-only input (phones, most tablets): swap to "tap or slide" since
+   there's no physical keyboard to type on. */
+@media (pointer: coarse) and (hover: none) {
+  .cw-hint-desktop {
+    display: none;
+  }
+  .cw-hint-touch {
+    display: inline;
+  }
+}
+
+.feedback {
+  min-height: 1.3rem;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--c-muted);
+}
+
+.feedback.ok {
+  color: var(--c-good);
+}
+
+.feedback.bad {
+  color: var(--c-bad);
+}
+
+.wordlist {
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  min-height: 3.5rem;
+}
+
+.wordlist-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  color: var(--c-fg);
+  position: relative;
+}
+
+.chip-unique {
+  border-color: color-mix(in srgb, var(--c-warn) 60%, var(--c-border));
+  padding-left: 1.1rem;
+}
+
+.chip-star {
+  position: absolute;
+  top: 50%;
+  left: 0.35rem;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--c-warn);
+  pointer-events: none;
+}

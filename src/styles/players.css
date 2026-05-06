@@ -1,0 +1,82 @@
+.players-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.player {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.player.me {
+  /* The "(you)" marker already identifies the current player — no extra
+     border needed. */
+}
+
+.player.offline {
+  opacity: 0.45;
+}
+
+.player .pname {
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-fg);
+}
+
+.player .pscore {
+  font-family: var(--font-mono);
+  color: var(--c-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.host-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35em;
+  height: 1.35em;
+  margin-right: 0.45rem;
+  color: var(--c-bad);
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid var(--c-bad);
+  border-radius: 999px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.ready-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  color: var(--c-good);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.me-mark {
+  margin-left: 0.35rem;
+  color: var(--c-muted);
+  font-size: 0.78em;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.player.ready {
+  border-color: var(--c-good);
+}
+
+.ready-btn.is-ready {
+  background: var(--c-good);
+  border-color: var(--c-good);
+}

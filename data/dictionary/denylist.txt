@@ -1,0 +1,21 @@
+# Words to exclude from the Boggle dictionary even though Wiktionary has a
+# "legitimate" noun/verb/adjective entry. These slipped through every
+# automatic filter (POS tags, gloss-phrase filter, frequency ranks) because
+# they have a technically-valid sense in English but in practice nobody
+# playing Boggle would accept them as scorable words.
+#
+# One lowercase word per line. Comments start with #. Rebuilt next time
+# you run `pnpm --filter bawgle exec tsx scripts/build-dictionary.ts`.
+
+# Initialisms / acronyms with a single obscure noun sense
+abc
+abe
+aaa
+tex
+tse
+tts
+usa
+lol
+
+# Proper-noun-derived currency/unit names that feel like cheating
+leone

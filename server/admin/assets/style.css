@@ -1,0 +1,95 @@
+:root { color-scheme: light dark; }
+
+body {
+  font: 14px/1.4 ui-sans-serif, system-ui, sans-serif;
+  margin: 1.5rem;
+  max-width: 1100px;
+}
+
+h1 { margin: 0 0 .25rem; font-size: 1.25rem; }
+h2 { font-size: 1rem; margin: 1.25rem 0 .5rem; }
+
+.sub { opacity: .7; margin-bottom: 1.5rem; }
+.muted { opacity: .6; }
+
+/* Metric cards at the top of the page. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: .5rem;
+  margin-bottom: 1.5rem;
+}
+.card {
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+}
+.card .n { font-size: 1.5rem; font-weight: 600; }
+.card .l {
+  opacity: .65;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* Rooms table. */
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td {
+  text-align: left;
+  padding: .3rem .5rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+th { opacity: .7; font-weight: 500; }
+
+.phase-playing { color: #2a9d3f; font-weight: 600; }
+.phase-lobby   { opacity: .7; }
+.phase-results { color: #d98324; }
+
+/* Event log panes (live + persisted). */
+.events {
+  font-family: ui-monospace, monospace;
+  font-size: .8rem;
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 8px;
+  padding: .5rem;
+}
+.ev { padding: .15rem 0; }
+.ev .ts { opacity: .55; margin-right: .5rem; }
+.ev .ty {
+  display: inline-block;
+  min-width: 11ch;
+  font-weight: 600;
+  margin-right: .5rem;
+}
+
+button {
+  font: inherit;
+  padding: .2rem .5rem;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+  background: transparent;
+  cursor: pointer;
+}
+button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+
+/* Persisted log viewer controls. */
+.log-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .5rem;
+  font-size: .9rem;
+}
+.log-controls select,
+.log-controls input {
+  font: inherit;
+  padding: .2rem .4rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: transparent;
+  color: inherit;
+}
+.log-controls input { min-width: 16ch; }

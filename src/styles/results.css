@@ -1,0 +1,182 @@
+.results-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.result-row {
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Self gets no extra outline — the "(you)" marker already identifies them.
+   Only the winner row draws a styled border. */
+
+/* Winner — gold outline with a shimmering gradient sweep. */
+.result-row.winner {
+  border-color: #fbbf24;
+  box-shadow:
+    inset 0 0 0 1px #fbbf24,
+    0 0 24px color-mix(in srgb, #fbbf24 30%, transparent);
+  position: relative;
+  overflow: hidden;
+  animation: winner-pop 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Animated gold sheen that sweeps across the row. The background is twice
+   as wide as the element so a 200% → 0 translation lands on an identical
+   point in the pattern, giving a seamless loop. We also hold at 0 for a
+   beat so the shimmer feels like a pass, not constant motion. */
+.result-row.winner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 45%,
+    color-mix(in srgb, #fbbf24 25%, transparent) 49%,
+    color-mix(in srgb, #fff 22%, transparent) 50%,
+    color-mix(in srgb, #fbbf24 25%, transparent) 51%,
+    transparent 55%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-position: 200% 0;
+  animation: winner-sheen 3.6s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes winner-pop {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes winner-sheen {
+  0% {
+    background-position: 200% 0;
+  }
+  50% {
+    background-position: -100% 0;
+  }
+  /* Pause off-screen to the left between sweeps, then the next cycle
+     resets back to 200% — same pattern, no visible jump. */
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.winner-crown {
+  color: #fbbf24;
+  margin-right: 0.5rem;
+  font-size: 1.5em;
+  line-height: 1;
+  display: inline-block;
+  transform-origin: center bottom;
+  animation: crown-bob 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 1px 4px color-mix(in srgb, #fbbf24 50%, transparent));
+}
+
+@keyframes crown-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(4deg);
+  }
+}
+
+.result-row.missed {
+  border-style: dashed;
+  opacity: 0.85;
+  position: relative;
+}
+
+.result-row.missed .pname {
+  color: var(--c-muted);
+  font-weight: 500;
+}
+
+.result-row.missed .pscore {
+  color: var(--c-muted);
+}
+
+/* Collapsed state: cap height to roughly 5 rows of chips. A bottom fade
+   hints there's more. Expansion unsets the cap. */
+.result-row.missed.collapsed .missed-words {
+  max-height: 10rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+}
+
+.missed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  padding: 0.35rem 0.65rem;
+  background: transparent;
+  color: var(--c-muted);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.missed-toggle:hover {
+  color: var(--c-fg);
+  border-color: var(--c-fg);
+}
+
+.missed-toggle-icon {
+  display: inline-block;
+  line-height: 1;
+  transition: transform 200ms ease;
+}
+
+.result-row.missed:not(.collapsed) .missed-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.result-row .rhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.result-row .rhead .pname {
+  font-weight: 500;
+}
+
+.result-row .rhead .pscore {
+  font-family: var(--font-mono);
+  color: var(--c-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.result-row.winner .rhead .pscore {
+  color: #fbbf24;
+}
+
+.result-row .words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}

@@ -1,0 +1,94 @@
+/* Theme variables are injected at runtime via themes.js.
+   Defaults here so the first paint isn't unstyled. */
+:root {
+  --c-bg: #282a36;
+  --c-panel: #21222c;
+  --c-border: #373949;
+  --c-fg: #f8f8f2;
+  --c-muted: #6272a4;
+  --c-accent: #bd93f9;
+  --c-good: #50fa7b;
+  --c-bad: #ff5555;
+  --c-warn: #f1fa8c;
+  --c-tile: #44475a;
+  --c-tile-fg: #f8f8f2;
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --gap: 1.1rem;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--c-bg);
+  color: var(--c-fg);
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Make sure the native HTML `hidden` attribute beats any later display rule
+   (e.g. elements with `display: flex`). */
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+a.link {
+  color: var(--c-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+a.link:hover {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
+.muted {
+  color: var(--c-muted);
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

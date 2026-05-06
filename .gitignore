@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+.DS_Store
+*.log
+.env
+.env.local
+.vite/
+
+# SQLite runtime data (DB files, never dictionary sources)
+data/boggle.db*
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Generated admin dashboard bundle (compiled from app.ts)
+server/admin/assets/app.js
+
+# Cached Wiktionary dump + frequency list (rebuilt on demand)
+.cache/

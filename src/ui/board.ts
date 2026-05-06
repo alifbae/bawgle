@@ -1,0 +1,178 @@
+import { dom } from "../dom.ts";
+import { neighbors, setBoardSize } from "../game/path.ts";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+export function renderBoard(board: string[] | null | undefined, size = 4): void {
+  setBoardSize(size);
+  dom.board.style.setProperty("--board-size", String(size));
+
+  // Keep the SVG trail element; remove only dice
+  for (const el of [...dom.board.children]) {
+    if (el !== dom.boardTrail) el.remove();
+  }
+  const total = size * size;
+  if (!board) {
+    for (let i = 0; i < total; i++) {
+      dom.board.appendChild(makeCap("·", i, true));
+    }
+    clearTrail();
+    return;
+  }
+  for (let i = 0; i < board.length; i++) {
+    const face = board[i];
+    const label = face === "Qu" ? "Qu" : face.toUpperCase();
+    dom.board.appendChild(makeCap(label, i, false));
+  }
+}
+
+function makeCap(
+  label: string,
+  index: number,
+  placeholder: boolean
+): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "die" + (placeholder ? " placeholder" : "");
+  btn.dataset.index = String(index);
+  btn.setAttribute("aria-label", placeholder ? "empty tile" : `letter ${label}`);
+  if (placeholder) btn.disabled = true;
+
+  const base = document.createElement("span");
+  base.className = "cap-base";
+
+  const top = document.createElement("span");
+  top.className = "cap-top";
+  const lbl = document.createElement("span");
+  lbl.className = "cap-label";
+  lbl.textContent = label;
+  top.appendChild(lbl);
+
+  btn.appendChild(base);
+  btn.appendChild(top);
+  return btn;
+}
+
+export function applyPathUI(pathIndices: number[]): void {
+  const selSet = new Set(pathIndices);
+  const last = pathIndices[pathIndices.length - 1];
+  const adjSet =
+    last !== undefined
+      ? new Set(neighbors(last).filter((i) => !selSet.has(i)))
+      : new Set<number>();
+
+  for (const el of dom.board.querySelectorAll<HTMLElement>(".die")) {
+    const i = Number(el.dataset.index);
+    el.classList.toggle("selected", selSet.has(i));
+    el.classList.toggle("last", i === last);
+    el.classList.toggle("adjacent", adjSet.has(i));
+  }
+}
+
+export function pulsePress(index: number): void {
+  const el = dom.board.querySelector<HTMLElement>(`.die[data-index="${index}"]`);
+  if (!el) return;
+  el.classList.remove("pressed");
+  // force reflow
+  void el.offsetWidth;
+  el.classList.add("pressed");
+  setTimeout(() => el.classList.remove("pressed"), 130);
+}
+
+/* ---------- SVG trail ---------- */
+
+function capCenter(index: number): { x: number; y: number } | null {
+  const el = dom.board.querySelector<HTMLElement>(`.die[data-index="${index}"]`);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  const boardRect = dom.board.getBoundingClientRect();
+  return {
+    x: rect.left - boardRect.left + rect.width / 2,
+    y: rect.top - boardRect.top + rect.height / 2,
+  };
+}
+
+export function clearTrail(): void {
+  dom.boardTrail.innerHTML = "";
+}
+
+export function drawTrail(pathIndices: number[]): void {
+  clearTrail();
+  if (pathIndices.length < 2) return;
+
+  const rect = dom.board.getBoundingClientRect();
+  dom.boardTrail.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+  dom.boardTrail.setAttribute("preserveAspectRatio", "none");
+
+  const points = pathIndices
+    .map(capCenter)
+    .filter((p): p is { x: number; y: number } => p !== null);
+  if (points.length < 2) return;
+
+  const d = points
+    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+    .join(" ");
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("class", "trail-line");
+  path.setAttribute("d", d);
+  dom.boardTrail.appendChild(path);
+}
+
+export function updateCurrentWord(text: string): void {
+  if (text.length === 0) {
+    dom.currentWord.innerHTML =
+      '<span class="cw-placeholder">' +
+      '<span class="cw-hint-desktop">tap, type, or slide</span>' +
+      '<span class="cw-hint-touch">tap or slide</span>' +
+      "</span>";
+    dom.currentWord.classList.remove("invalid");
+    dom.undoBtn.hidden = true;
+    dom.submitBtn.hidden = true;
+  } else {
+    dom.currentWord.textContent = text.toUpperCase();
+    dom.currentWord.classList.toggle("invalid", text.length < 3);
+    dom.undoBtn.hidden = false;
+    dom.submitBtn.hidden = false;
+  }
+}
+
+export function findCapUnderPoint(clientX: number, clientY: number): number {
+  const el = document.elementFromPoint(clientX, clientY);
+  if (!el) return -1;
+  const die = el.closest<HTMLButtonElement>(".die");
+  if (!die || !dom.board.contains(die) || die.disabled) return -1;
+  return Number(die.dataset.index);
+}
+
+/**
+ * Nearest-center lookup tuned for drag gestures.
+ */
+export function findCapNearPoint(
+  clientX: number,
+  clientY: number,
+  tolerance = 0.55
+): number {
+  const dice = dom.board.querySelectorAll<HTMLButtonElement>(".die:not(:disabled)");
+  let bestIdx = -1;
+  let bestDistSq = Infinity;
+  let tileSize = 0;
+
+  for (const die of dice) {
+    const rect = die.getBoundingClientRect();
+    if (!tileSize) tileSize = Math.max(rect.width, rect.height);
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      bestIdx = Number(die.dataset.index);
+    }
+  }
+
+  if (bestIdx === -1) return -1;
+  const maxDist = tileSize * tolerance;
+  if (bestDistSq > maxDist * maxDist) return -1;
+  return bestIdx;
+}

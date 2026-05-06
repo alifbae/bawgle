@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Favicon variant of the boggle mark. Simpler than the header logo so it
+  still reads at 16x16: larger tiles, the path tiles highlighted with the
+  accent color, a thicker trace, no letters (text becomes unreadable at
+  that size anyway).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="10" fill="#1e1b4b" />
+
+  <!-- 3x3 tiles -->
+  <g fill="#2d2a6f">
+    <rect x="7"  y="7"  width="14" height="14" rx="3" />
+    <rect x="24" y="7"  width="14" height="14" rx="3" />
+    <rect x="41" y="7"  width="14" height="14" rx="3" />
+    <rect x="7"  y="24" width="14" height="14" rx="3" />
+    <rect x="24" y="24" width="14" height="14" rx="3" />
+    <rect x="41" y="24" width="14" height="14" rx="3" />
+    <rect x="7"  y="41" width="14" height="14" rx="3" />
+    <rect x="24" y="41" width="14" height="14" rx="3" />
+    <rect x="41" y="41" width="14" height="14" rx="3" />
+  </g>
+
+  <!-- Selected path tiles -->
+  <g fill="#7dd3fc">
+    <rect x="7"  y="7"  width="14" height="14" rx="3" />
+    <rect x="24" y="24" width="14" height="14" rx="3" />
+    <rect x="41" y="41" width="14" height="14" rx="3" />
+  </g>
+
+  <!-- Diagonal trace through the three accent tiles -->
+  <path
+    d="M14 14 L31 31 L48 48"
+    stroke="#f472b6"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <circle cx="14" cy="14" r="2.5" fill="#f472b6" />
+</svg>

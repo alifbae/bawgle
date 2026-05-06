@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+pnpm-lock.yaml
+data/dictionary/words.txt
+data/dictionary/definitions.json
+data/dictionary/inflections.json
+server/admin/assets/app.js
+.kiro
