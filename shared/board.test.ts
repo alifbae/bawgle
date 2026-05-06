@@ -36,10 +36,22 @@ describe("wordPathExists", () => {
   //  P O L I
   //  D N E G
   const board4 = [
-    "C", "A", "T", "S",
-    "H", "E", "R", "U",
-    "P", "O", "L", "I",
-    "D", "N", "E", "G",
+    "C",
+    "A",
+    "T",
+    "S",
+    "H",
+    "E",
+    "R",
+    "U",
+    "P",
+    "O",
+    "L",
+    "I",
+    "D",
+    "N",
+    "E",
+    "G",
   ];
 
   it("finds straight horizontal paths", () => {
@@ -72,10 +84,22 @@ describe("wordPathExists", () => {
     //   E  F G H
     //   I  J K L
     const qBoard = [
-      "Qu", "E", "E", "N",
-      "A", "B", "C", "D",
-      "E", "F", "G", "H",
-      "I", "J", "K", "L",
+      "Qu",
+      "E",
+      "E",
+      "N",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
     ];
     expect(wordPathExists(qBoard, "QUEEN", 4)).toBe(true);
     // QE alone still starts at Qu cell, adjacency to E at index 1 is fine.

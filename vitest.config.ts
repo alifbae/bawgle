@@ -14,11 +14,7 @@ export default defineConfig({
     // Default to Node; individual files override to jsdom when they need
     // window / localStorage / DOM APIs.
     environment: "node",
-    include: [
-      "server/**/*.test.ts",
-      "shared/**/*.test.ts",
-      "src/**/*.test.ts",
-    ],
+    include: ["server/**/*.test.ts", "shared/**/*.test.ts", "src/**/*.test.ts"],
     // The dictionary/storage tests do real file I/O to a tmp dir. Keep
     // each test file single-threaded against its own fixtures.
     pool: "forks",

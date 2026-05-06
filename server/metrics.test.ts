@@ -109,7 +109,11 @@ describe("metrics — JSONL persistence", () => {
     m.configureLogging({ dir: tmp });
 
     const files = m.listLogFiles();
-    expect(files.map((f) => f.date)).toEqual(["2026-05-05", "2026-03-03", "2026-01-01"]);
+    expect(files.map((f) => f.date)).toEqual([
+      "2026-05-05",
+      "2026-03-03",
+      "2026-01-01",
+    ]);
     expect(files.find((f) => f.date === "2026-05-05")!.bytes).toBe(3);
   });
 
@@ -123,7 +127,7 @@ describe("metrics — JSONL persistence", () => {
         "{not valid json",
         JSON.stringify({ ts: 2, type: "leave", data: { n: 2 } }),
         "",
-      ].join("\n") + "\n",
+      ].join("\n") + "\n"
     );
     m.configureLogging({ dir: tmp });
 
@@ -152,7 +156,7 @@ describe("metrics — JSONL persistence", () => {
     const today = new Date(now);
     const fmt = (d: Date) =>
       `events-${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
-        d.getUTCDate(),
+        d.getUTCDate()
       ).padStart(2, "0")}.jsonl`;
 
     const oldFile = fmt(tenDaysAgo);

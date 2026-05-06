@@ -9,11 +9,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, extname, join, normalize } from "node:path";
 import type { Hono } from "hono";
 
-import {
-  purgeRoom,
-  roomsSnapshot,
-  roomsSummary,
-} from "../rooms.ts";
+import { purgeRoom, roomsSnapshot, roomsSummary } from "../rooms.ts";
 import {
   listLogFiles,
   processStats,

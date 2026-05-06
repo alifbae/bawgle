@@ -1,21 +1,304 @@
-# Words to exclude from the Boggle dictionary even though Wiktionary has a
-# "legitimate" noun/verb/adjective entry. These slipped through every
-# automatic filter (POS tags, gloss-phrase filter, frequency ranks) because
-# they have a technically-valid sense in English but in practice nobody
-# playing Boggle would accept them as scorable words.
+# Words to exclude from the Boggle dictionary even though Wiktionary
+# has a "legitimate" entry. Curated by scripts/_propose-denylist.mjs +
+# manual review. Mostly: initialisms, proper nouns, misspellings, and
+# clippings that slipped every automatic filter.
 #
-# One lowercase word per line. Comments start with #. Rebuilt next time
-# you run `pnpm --filter bawgle exec tsx scripts/build-dictionary.ts`.
+# One lowercase word per line. Comments start with #. Applied at
+# build time by scripts/build-dictionary.ts.
 
-# Initialisms / acronyms with a single obscure noun sense
+# Pre-existing entries
+aaa
 abc
 abe
-aaa
+leone
+lol
 tex
 tse
 tts
 usa
-lol
 
-# Proper-noun-derived currency/unit names that feel like cheating
-leone
+# No-vowel abbreviations (32)
+ddd
+ddr
+ddt
+dvr
+gps
+hmm
+jfk
+kms
+mmmm
+mms
+mrs
+msg
+nfl
+pfft
+pjs
+pms
+psst
+rdx
+rpg
+sgt
+shh
+sms
+ssh
+std
+vhs
+xxx
+
+# 3-letter initialisms with no definition (53)
+aff
+als
+ast
+bev
+cal
+dem
+dev
+els
+eva
+fah
+fam
+gov
+haj
+hef
+hes
+hye
+iso
+jan
+jaz
+jer
+kan
+leo
+les
+lis
+lon
+mac
+mit
+neo
+nom
+nur
+omo
+oot
+ord
+org
+pah
+pos
+pre
+reb
+res
+rie
+sem
+sim
+sto
+stu
+suh
+tac
+tam
+tre
+tye
+ust
+vid
+wil
+zis
+
+# Defless words matching misspelling patterns (32)
+adress
+afterall
+algo
+allright
+alot
+asterix
+aswell
+begining
+cann
+capp
+carb
+carefull
+carrie
+cary
+chappell
+comin
+comm
+comming
+commited
+comms
+embarassed
+embarassing
+farr
+goff
+goverment
+griff
+happend
+hoss
+morrell
+occured
+platt
+realy
+
+# Informal / eye-dialect / elongated variants with no independent meaning (13)
+boyz
+der
+hav
+kno
+miz
+nite
+oooh
+soo
+sooo
+ter
+thar
+woz
+yor
+
+# Stress-test casualties: proper nouns, names, clippings that survived every
+# other filter but commonly show up in play as "thats not a word" hits (63)
+boog
+cady
+cath
+chem
+chet
+chie
+copa
+dawg
+dede
+dias
+dich
+doin
+eben
+eugh
+evac
+fait
+fein
+flim
+gawd
+goin
+grad
+hyde
+jogi
+kees
+lets
+limo
+lino
+lipo
+lyon
+mani
+marg
+mayo
+mens
+mets
+noah
+olde
+pani
+phil
+prez
+prob
+reno
+reve
+roge
+rong
+saul
+sean
+shal
+shep
+shii
+sion
+sofi
+sona
+soph
+sous
+tach
+thay
+tron
+tung
+wast
+wilk
+yong
+yoon
+zhen
+
+# 100k stress, 4-letter additions (3)
+fina
+gump
+prof
+
+# 100k stress, 5-letter casualties (70)
+# Surnames / given names
+beene
+bodie
+bossa
+boyle
+brent
+brest
+camus
+cryer
+earle
+eller
+foyle
+goode
+gould
+hooke
+horne
+jinny
+keene
+kiley
+larry
+locke
+meade
+mello
+paine
+payne
+perce
+petar
+philo
+pryce
+raine
+rayne
+rosey
+sheri
+shirl
+signe
+sousa
+swamy
+tilda
+towne
+tyler
+whyte
+wilde
+wolfe
+
+# Place names
+chile
+colum
+dijon
+macao
+maine
+
+# Foreign words / informal phrases with no English meaning
+bitte
+entre
+forme
+garde
+leche
+massa
+noone
+paise
+rican
+tigre
+vamos
+
+# Clippings / misspellings / informal
+choco
+exfil
+fraid
+gunga
+marys
+mouch
+payed
+purty
+solly
+sucka
+tetch
+thang
+vilde
+
+# Offensive
+nigga

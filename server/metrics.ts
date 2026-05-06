@@ -19,7 +19,14 @@
 // rollup that resets on boot. Persisted events let you reconstruct any
 // counter over any time range after the fact.
 
-import { appendFileSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { join } from "node:path";
 
 const EVENT_BUFFER_SIZE = 500;
@@ -71,7 +78,10 @@ let warnedOnWrite = false;
  * calls overwrite the config (useful in tests). Setting `dir` to null
  * disables persistence — events only go to the ring buffer and stdout.
  */
-export function configureLogging(opts: { dir: string | null; retentionDays?: number }): void {
+export function configureLogging(opts: {
+  dir: string | null;
+  retentionDays?: number;
+}): void {
   logDir = opts.dir;
   retentionDays = opts.retentionDays ?? retentionDays;
   warnedOnWrite = false;
@@ -258,12 +268,17 @@ export function sweepLogs(now: number = Date.now()): number {
         unlinkSync(join(logDir, info.name));
         removed += 1;
       } catch (err) {
-        console.warn(`[bawgle] log sweep: unlink ${info.name} failed:`, (err as Error).message);
+        console.warn(
+          `[bawgle] log sweep: unlink ${info.name} failed:`,
+          (err as Error).message
+        );
       }
     }
   }
   if (removed > 0) {
-    console.log(`[bawgle] log sweep: removed ${removed} file(s) older than ${retentionDays}d`);
+    console.log(
+      `[bawgle] log sweep: removed ${removed} file(s) older than ${retentionDays}d`
+    );
   }
   return removed;
 }

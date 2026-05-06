@@ -115,8 +115,24 @@ describe("createPathStore", () => {
     s.push(0);
     s.push(1);
     s.push(5);
-    const board = ["C", "A", "T", "S", "H", "E", "R", "U",
-                   "P", "O", "L", "I", "D", "N", "E", "G"];
+    const board = [
+      "C",
+      "A",
+      "T",
+      "S",
+      "H",
+      "E",
+      "R",
+      "U",
+      "P",
+      "O",
+      "L",
+      "I",
+      "D",
+      "N",
+      "E",
+      "G",
+    ];
     expect(s.wordText(board)).toBe("cae");
     expect(s.wordText(null)).toBe("");
   });

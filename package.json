@@ -16,7 +16,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:coverage": "vitest --run --coverage"
+    "test:coverage": "vitest --run --coverage",
+    "compose:dev": "docker compose -f docker-compose.dev.yml up -d --build",
+    "compose:dev:down": "docker compose -f docker-compose.dev.yml down",
+    "compose:dev:logs": "docker compose -f docker-compose.dev.yml logs -f",
+    "compose:prod": "docker compose pull && docker compose up -d",
+    "compose:prod:down": "docker compose down",
+    "compose:prod:logs": "docker compose logs -f"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",

@@ -3,16 +3,9 @@ import { Hono } from "hono";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, extname } from "node:path";
-import {
-  restoreRooms,
-  startRoomSweeper,
-} from "./rooms.ts";
+import { restoreRooms, startRoomSweeper } from "./rooms.ts";
 import { loadDictionary, lookupDefinition } from "./dictionary.ts";
-import {
-  bumpCounter,
-  configureLogging,
-  sweepLogs,
-} from "./metrics.ts";
+import { bumpCounter, configureLogging, sweepLogs } from "./metrics.ts";
 import { closeStorage, initStorage } from "./storage.ts";
 import { adminEnabled, registerAdminRoutes } from "./admin/index.ts";
 import { attachNetcode } from "./netcode.ts";
@@ -130,4 +123,3 @@ function shutdown(signal: string) {
 }
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-

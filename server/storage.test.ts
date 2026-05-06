@@ -125,12 +125,22 @@ describe("storage", () => {
     const state = makeState("SWAP", {
       players: [
         {
-          id: "p1", clientId: "c1", name: "ALFA",
-          connected: true, ready: false, score: 0, words: [],
+          id: "p1",
+          clientId: "c1",
+          name: "ALFA",
+          connected: true,
+          ready: false,
+          score: 0,
+          words: [],
         },
         {
-          id: "p2", clientId: "c2", name: "BETA",
-          connected: true, ready: false, score: 0, words: [],
+          id: "p2",
+          clientId: "c2",
+          name: "BETA",
+          connected: true,
+          ready: false,
+          score: 0,
+          words: [],
         },
       ],
     });
@@ -141,8 +151,13 @@ describe("storage", () => {
       players: [
         state.players[1],
         {
-          id: "p3", clientId: "c3", name: "GAMA",
-          connected: true, ready: false, score: 0, words: [],
+          id: "p3",
+          clientId: "c3",
+          name: "GAMA",
+          connected: true,
+          ready: false,
+          score: 0,
+          words: [],
         },
       ],
     });
@@ -158,8 +173,13 @@ describe("storage", () => {
       state: makeState("GONE", {
         players: [
           {
-            id: "p1", clientId: "c1", name: "ZZZZ",
-            connected: true, ready: false, score: 0, words: [],
+            id: "p1",
+            clientId: "c1",
+            name: "ZZZZ",
+            connected: true,
+            ready: false,
+            score: 0,
+            words: [],
           },
         ],
       }),

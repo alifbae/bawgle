@@ -6,10 +6,22 @@ describe("findPathForWord", () => {
   beforeEach(() => setBoardSize(4));
 
   const board = [
-    "C", "A", "T", "S",
-    "H", "E", "R", "U",
-    "P", "O", "L", "I",
-    "D", "N", "E", "G",
+    "C",
+    "A",
+    "T",
+    "S",
+    "H",
+    "E",
+    "R",
+    "U",
+    "P",
+    "O",
+    "L",
+    "I",
+    "D",
+    "N",
+    "E",
+    "G",
   ];
 
   it("returns null for empty or missing inputs", () => {
@@ -48,10 +60,22 @@ describe("findPathForWord", () => {
 
   it("handles the Qu digraph as a single cell", () => {
     const qBoard = [
-      "Qu", "E", "E", "N",
-      "A", "B", "C", "D",
-      "E", "F", "G", "H",
-      "I", "J", "K", "L",
+      "Qu",
+      "E",
+      "E",
+      "N",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
     ];
     const path = findPathForWord(qBoard, "queen");
     expect(path).not.toBeNull();

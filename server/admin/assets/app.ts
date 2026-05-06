@@ -144,18 +144,36 @@ async function refresh(): Promise<void> {
             const remain = r.endsAt ? r.endsAt - Date.now() : null;
             return (
               "<tr>" +
-              "<td><code>" + r.code + "</code></td>" +
-              '<td class="phase-' + r.phase + '">' + r.phase + "</td>" +
-              "<td>" + (r.hostName || '<span class="muted">—</span>') + "</td>" +
-              "<td>" + r.connectedCount + " / " + r.playerCount + "</td>" +
-              "<td>" + r.liveConnections + "</td>" +
-              "<td>" + r.size + "x" + r.size + "</td>" +
-              "<td>" +
-              (remain != null
-                ? fmtDuration(remain)
-                : '<span class="muted">—</span>') +
+              "<td><code>" +
+              r.code +
+              "</code></td>" +
+              '<td class="phase-' +
+              r.phase +
+              '">' +
+              r.phase +
               "</td>" +
-              '<td><button data-purge="' + r.code + '">purge</button></td>' +
+              "<td>" +
+              (r.hostName || '<span class="muted">—</span>') +
+              "</td>" +
+              "<td>" +
+              r.connectedCount +
+              " / " +
+              r.playerCount +
+              "</td>" +
+              "<td>" +
+              r.liveConnections +
+              "</td>" +
+              "<td>" +
+              r.size +
+              "x" +
+              r.size +
+              "</td>" +
+              "<td>" +
+              (remain != null ? fmtDuration(remain) : '<span class="muted">—</span>') +
+              "</td>" +
+              '<td><button data-purge="' +
+              r.code +
+              '">purge</button></td>' +
               "</tr>"
             );
           })
@@ -175,8 +193,7 @@ async function refresh(): Promise<void> {
       )
       .join("");
 
-    byId("heartbeat").textContent =
-      "updated " + new Date().toLocaleTimeString();
+    byId("heartbeat").textContent = "updated " + new Date().toLocaleTimeString();
   } catch (err) {
     byId("heartbeat").textContent =
       "error: " + (err instanceof Error ? err.message : String(err));
@@ -244,8 +261,7 @@ async function loadLogFile(): Promise<void> {
     );
     loadedEvents = events;
     renderLogEvents();
-    status.textContent =
-      events.length + " event" + (events.length === 1 ? "" : "s");
+    status.textContent = events.length + " event" + (events.length === 1 ? "" : "s");
   } catch (err) {
     status.textContent =
       "load failed: " + (err instanceof Error ? err.message : String(err));
@@ -294,16 +310,14 @@ document.addEventListener("click", async (ev) => {
   if (!confirm("Purge room " + code + "?")) return;
   btn.disabled = true;
   try {
-    const r = await fetch(
-      "../api/admin/rooms/" + encodeURIComponent(code) + "/purge",
-      { method: "POST", credentials: "same-origin" }
-    );
+    const r = await fetch("../api/admin/rooms/" + encodeURIComponent(code) + "/purge", {
+      method: "POST",
+      credentials: "same-origin",
+    });
     if (!r.ok) throw new Error(String(r.status));
     void refresh();
   } catch (err) {
-    alert(
-      "Purge failed: " + (err instanceof Error ? err.message : String(err))
-    );
+    alert("Purge failed: " + (err instanceof Error ? err.message : String(err)));
     btn.disabled = false;
   }
 });

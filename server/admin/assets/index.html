@@ -1,42 +1,47 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>bawgle admin</title>
-  <link rel="stylesheet" href="./assets/style.css" />
-</head>
-<body>
-  <h1>bawgle admin</h1>
-  <div class="sub" id="heartbeat">loading…</div>
-  <div class="cards" id="cards"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>bawgle admin</title>
+    <link rel="stylesheet" href="./assets/style.css" />
+  </head>
+  <body>
+    <h1>bawgle admin</h1>
+    <div class="sub" id="heartbeat">loading…</div>
+    <div class="cards" id="cards"></div>
 
-  <h2>Rooms <span class="muted" id="room-count"></span></h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Code</th><th>Phase</th><th>Host</th>
-        <th>Players</th><th>Live</th><th>Size</th>
-        <th>Ends in</th><th></th>
-      </tr>
-    </thead>
-    <tbody id="rooms"></tbody>
-  </table>
+    <h2>Rooms <span class="muted" id="room-count"></span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Phase</th>
+          <th>Host</th>
+          <th>Players</th>
+          <th>Live</th>
+          <th>Size</th>
+          <th>Ends in</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rooms"></tbody>
+    </table>
 
-  <h2>Recent events</h2>
-  <div class="events" id="events"></div>
+    <h2>Recent events</h2>
+    <div class="events" id="events"></div>
 
-  <h2>Persisted logs <span class="muted" id="log-file-count"></span></h2>
-  <div class="log-controls">
-    <label for="log-file">File:</label>
-    <select id="log-file"></select>
-    <label for="log-filter">Filter:</label>
-    <input id="log-filter" type="text" placeholder="type or substring" />
-    <button id="log-refresh">reload</button>
-    <span class="muted" id="log-status"></span>
-  </div>
-  <div class="events" id="log-events"></div>
+    <h2>Persisted logs <span class="muted" id="log-file-count"></span></h2>
+    <div class="log-controls">
+      <label for="log-file">File:</label>
+      <select id="log-file"></select>
+      <label for="log-filter">Filter:</label>
+      <input id="log-filter" type="text" placeholder="type or substring" />
+      <button id="log-refresh">reload</button>
+      <span class="muted" id="log-status"></span>
+    </div>
+    <div class="events" id="log-events"></div>
 
-  <script src="./assets/app.js"></script>
-</body>
+    <script src="./assets/app.js"></script>
+  </body>
 </html>

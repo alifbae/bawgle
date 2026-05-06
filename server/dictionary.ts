@@ -42,6 +42,7 @@ function insert(root: TrieNode, word: string) {
 
 export function loadDictionary(path?: string) {
   const resolved = path || join(DICT_DIR, "words.txt");
+  const dir = dirname(resolved);
   try {
     const raw = readFileSync(resolved, "utf8");
     words = new Set(
@@ -60,9 +61,10 @@ export function loadDictionary(path?: string) {
   }
 
   // Definitions + inflection map. Both are optional — if the files aren't
-  // present, the tooltip API just says "no definition available".
-  const defsPath = join(DICT_DIR, "definitions.json");
-  const inflPath = join(DICT_DIR, "inflections.json");
+  // present, the tooltip API just says "no definition available". Paths
+  // resolve relative to the words.txt file so tests can swap in fixtures.
+  const defsPath = join(dir, "definitions.json");
+  const inflPath = join(dir, "inflections.json");
   try {
     definitions = JSON.parse(readFileSync(defsPath, "utf8"));
     console.log(`[bawgle] loaded ${Object.keys(definitions).length} definitions`);

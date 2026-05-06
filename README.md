@@ -36,14 +36,14 @@ docker compose pull && docker compose up -d
 
 ## Environment
 
-| Variable                     | Default | Purpose                                |
-| ---------------------------- | ------- | -------------------------------------- |
-| `PORT`                       | `3001`  | HTTP port inside the container         |
-| `BAWGLE_DATA_DIR`            | `/data` | SQLite DB + daily log files live here  |
-| `BAWGLE_ADMIN_USER`          | `admin` | Basic-auth user for `/admin`           |
-| `BAWGLE_ADMIN_PASS`          | _unset_ | If empty, `/admin` returns 401 for all |
-| `BAWGLE_LOG_DIR`             | `$DATA_DIR/logs` | Set to `""` to disable JSONL logs |
-| `BAWGLE_LOG_RETENTION_DAYS`  | `30`    | Daily log files older than this pruned |
+| Variable                    | Default          | Purpose                                |
+| --------------------------- | ---------------- | -------------------------------------- |
+| `PORT`                      | `3001`           | HTTP port inside the container         |
+| `BAWGLE_DATA_DIR`           | `/data`          | SQLite DB + daily log files live here  |
+| `BAWGLE_ADMIN_USER`         | `admin`          | Basic-auth user for `/admin`           |
+| `BAWGLE_ADMIN_PASS`         | _unset_          | If empty, `/admin` returns 401 for all |
+| `BAWGLE_LOG_DIR`            | `$DATA_DIR/logs` | Set to `""` to disable JSONL logs      |
+| `BAWGLE_LOG_RETENTION_DAYS` | `30`             | Daily log files older than this pruned |
 
 ## Behind a reverse proxy
 

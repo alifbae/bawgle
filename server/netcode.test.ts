@@ -12,13 +12,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 
 // Fresh module graph per test so rooms/metrics/storage don't leak.
-async function freshServer(opts: {
-  maxConnsPerIp?: number;
-  msgBucketSize?: number;
-  msgBucketRate?: number;
-  heartbeatMs?: number;
-  maxFrameBytes?: number;
-} = {}): Promise<{
+async function freshServer(
+  opts: {
+    maxConnsPerIp?: number;
+    msgBucketSize?: number;
+    msgBucketRate?: number;
+    heartbeatMs?: number;
+    maxFrameBytes?: number;
+  } = {}
+): Promise<{
   url: string;
   http: HttpServer;
   close: () => Promise<void>;
@@ -156,7 +158,7 @@ describe("netcode — abuse controls", () => {
       const msgs = collectMessages(ws);
       const closed = new Promise<{ code: number; reason: string }>((resolve) => {
         ws.once("close", (code, reason) =>
-          resolve({ code, reason: reason.toString() }),
+          resolve({ code, reason: reason.toString() })
         );
       });
       // Burn the bucket: 3 allowed, next several should fail.
@@ -165,9 +167,7 @@ describe("netcode — abuse controls", () => {
       expect(info.code).toBe(1008);
       expect(info.reason.toLowerCase()).toContain("rate");
       // At least one error frame should have landed before the close.
-      expect(
-        msgs.some((m) => (m as { t?: string }).t === "error"),
-      ).toBe(true);
+      expect(msgs.some((m) => (m as { t?: string }).t === "error")).toBe(true);
     } finally {
       await srv.close();
     }

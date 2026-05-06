@@ -80,11 +80,12 @@ interface DefEntry {
 
 // Wiktionary tags many initialisms/acronyms as nouns, so POS alone doesn't
 // catch them. The gloss text, however, always opens with one of these
-// phrases when the entry is just an abbreviation. Rejecting on gloss keeps
-// real multi-sense words (like "ok" tagged as noun+interjection) while
-// dropping pure abbreviations.
+// phrases when the entry is just a pointer at another word. Rejecting on
+// gloss drops the reference-only senses (abbreviations, clippings,
+// misspellings, dated/archaic/obsolete variants, eye-dialect spellings)
+// while keeping real multi-sense words (like "ok" tagged as noun+interj).
 const ABBREV_GLOSS =
-  /^(initialism|abbreviation|acronym|alternative (?:letter-case )?form|alternative spelling) of\b/i;
+  /^(?:short for\b|(?:initialism|abbreviation|acronym|clipping|alternative (?:letter-case )?form|alternative spelling|misspelling|(?:eye dialect|informal|nonstandard|elongated) (?:spelling|form)|pronunciation spelling|(?:obsolete|archaic|dated) (?:form|spelling)) of\b)/i;
 
 function isAbbreviationGloss(gloss: string): boolean {
   return ABBREV_GLOSS.test(gloss);

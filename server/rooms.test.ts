@@ -127,7 +127,12 @@ describe("rooms", () => {
       if (first.playerId === null) throw new Error();
 
       for (let i = 1; i < 32; i++) {
-        const r = mod.rooms.joinRoom(new FakeSocket() as never, "FULL", "u" + i, "c" + i);
+        const r = mod.rooms.joinRoom(
+          new FakeSocket() as never,
+          "FULL",
+          "u" + i,
+          "c" + i
+        );
         if (r.playerId === null) throw new Error(`unexpected reject at ${i}`);
       }
 
@@ -253,7 +258,10 @@ describe("rooms", () => {
     it("clamps round seconds and rejects unsupported sizes", () => {
       const host = mod.rooms.joinRoom(new FakeSocket() as never, "SET1", "host", "c1");
       if (host.playerId === null) throw new Error();
-      mod.rooms.updateSettings(host.room, host.playerId, { roundSeconds: 9999, size: 7 as 4 });
+      mod.rooms.updateSettings(host.room, host.playerId, {
+        roundSeconds: 9999,
+        size: 7 as 4,
+      });
       // Clamped to maxRoundSeconds=300, size stays at default 4.
       expect(host.room.state.settings.roundSeconds).toBe(300);
       expect(host.room.state.settings.size).toBe(4);
