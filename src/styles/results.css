@@ -180,3 +180,15 @@
   flex-wrap: wrap;
   gap: 0.3rem;
 }
+
+/* Play-again cooldown — host sees the countdown for a few seconds after
+   round end so they can't hammer everyone back to the lobby too fast. */
+.btn.primary#play-again-btn.cooling,
+.btn.primary#play-again-btn:disabled {
+  background: color-mix(in srgb, var(--c-muted) 30%, transparent);
+  color: var(--c-muted);
+  cursor: wait;
+  pointer-events: none;
+  filter: none;
+  font-variant-numeric: tabular-nums;
+}

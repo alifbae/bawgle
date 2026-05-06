@@ -148,6 +148,21 @@ main {
   text-align: center;
 }
 
+.foot-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-muted);
+  transition: color 150ms ease;
+  padding: 0.35rem;
+  border-radius: 6px;
+}
+
+.foot-link:hover,
+.foot-link:focus-visible {
+  color: var(--c-fg);
+}
+
 @media (max-width: 380px) {
   main {
     padding: 1rem 0.75rem 1.5rem;

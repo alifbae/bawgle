@@ -13,6 +13,8 @@ import { attachNetcode } from "./netcode.ts";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = join(__dirname, "../dist");
 const PORT = Number(process.env.PORT || 3001);
+const ENVIRONMENT = process.env.BAWGLE_ENVIRONMENT || "production";
+const IS_DEV = ENVIRONMENT === "development";
 const DATA_DIR =
   process.env.BAWGLE_DATA_DIR ||
   process.env.BOGGLE_DATA_DIR /* legacy env var */ ||
@@ -105,6 +107,10 @@ attachNetcode(httpServer);
 
 httpServer.listen(PORT, () => {
   console.log(`[bawgle] listening on :${PORT}`);
+  console.log(`[bawgle] environment=${ENVIRONMENT}`);
+  if (IS_DEV) {
+    console.log("[bawgle] dev mode: window.bawgleDev is available in the browser console");
+  }
   if (!adminEnabled) {
     console.log("[bawgle] admin dashboard DISABLED (set BAWGLE_ADMIN_PASS to enable)");
   } else {

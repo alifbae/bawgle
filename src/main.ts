@@ -11,6 +11,7 @@ import { initSettings, syncSettingsInputs } from "./ui/settings.ts";
 import { setClientId } from "./util/client-id.ts";
 import { createPathStore } from "./game/path.ts";
 import { attachInput } from "./game/input.ts";
+import { armPlayAgain, disarmPlayAgain } from "./ui/play-again.ts";
 import type { RoomState, ServerMsg } from "../shared/types.ts";
 
 let meId: string | null = null;
@@ -61,6 +62,7 @@ function handleServerMessage(msg: ServerMsg): void {
 }
 
 function applyState(state: RoomState): void {
+  const prevPhase = currentState?.phase ?? null;
   currentState = state;
   dom.roomCodeDisplay.textContent = state.code;
   updateRoomInUrl(state.code);
@@ -146,6 +148,14 @@ function applyState(state: RoomState): void {
     dom.tutorial.hidden = true;
     dom.boardWrap.hidden = true;
     path.clear();
+    // Lock out "play again" for a few seconds when we first enter the
+    // results phase, so no one can drag the room straight back to the
+    // lobby before players have a chance to see who won.
+    if (prevPhase !== "results") armPlayAgain();
+  } else {
+    // Left the results phase — make sure the lockout timer can't tick
+    // against a hidden button.
+    if (prevPhase === "results") disarmPlayAgain();
   }
 
   dom.playAgainBtn.hidden = !isHost;
@@ -220,3 +230,9 @@ setPhase("lobby");
   if (!storedName) return;
   connectAndJoin({ code, name: storedName }, handleServerMessage);
 })();
+
+// Dev-only helpers. The constant is replaced at build time, so the dynamic
+// import is eliminated from production bundles via tree-shaking.
+if (__BAWGLE_ENVIRONMENT__ === "development") {
+  import("./dev-helpers.ts").then(({ installDevHelpers }) => installDevHelpers());
+}

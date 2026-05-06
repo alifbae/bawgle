@@ -1,6 +1,7 @@
 import { dom } from "../dom.ts";
 import { escape } from "../util/escape.ts";
 import type { RoomState } from "../../shared/types.ts";
+import { scoreWord } from "../../shared/types.ts";
 import { attachDefinitionTooltip } from "./definition-tooltip.ts";
 
 let tooltipAttached = false;
@@ -20,9 +21,18 @@ export function renderMyWords(state: RoomState, meId: string | null): void {
     span.className = "fw";
     if (w.length >= 6) span.classList.add("fw-long");
     if (i === words.length - 1 && w === latest) span.classList.add("fw-latest");
-    span.textContent = w;
+
+    const wordText = document.createElement("span");
+    wordText.className = "fw-text";
+    wordText.textContent = w;
+    span.appendChild(wordText);
+
+    const points = document.createElement("span");
+    points.className = "fw-score";
+    points.textContent = `+${scoreWord(w)}`;
+    span.appendChild(points);
+
     dom.myWords.appendChild(span);
-    dom.myWords.appendChild(document.createTextNode(" "));
   }
 }
 
@@ -65,7 +75,8 @@ export function renderResults(state: RoomState, meId: string | null): void {
           ? '<span class="chip-star" title="only you found this">★</span>'
           : "";
         const cls = unique ? "chip chip-unique" : "chip";
-        return `<span class="${cls}" data-word="${escape(w)}" role="button" tabindex="0">${star}${escape(w)}</span>`;
+        const pts = scoreWord(w);
+        return `<span class="${cls}" data-word="${escape(w)}" role="button" tabindex="0">${star}${escape(w)}<sup class="chip-score">+${pts}</sup></span>`;
       })
       .join("");
     row.innerHTML = `
@@ -90,10 +101,10 @@ export function renderResults(state: RoomState, meId: string | null): void {
     panel.className = "result-row missed collapsed";
     const missedChips = missed
       .sort((a, b) => b.length - a.length || a.localeCompare(b))
-      .map(
-        (w) =>
-          `<span class="chip" data-word="${escape(w)}" role="button" tabindex="0">${escape(w)}</span>`
-      )
+      .map((w) => {
+        const pts = scoreWord(w);
+        return `<span class="chip" data-word="${escape(w)}" role="button" tabindex="0">${escape(w)}<sup class="chip-score">+${pts}</sup></span>`;
+      })
       .join("");
     panel.innerHTML = `
       <div class="rhead">

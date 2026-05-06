@@ -1,7 +1,14 @@
 import { defineConfig } from "vite";
 
+// Surface BAWGLE_ENVIRONMENT to the client bundle as a compile-time string.
+// `development` turns on window.bawgleDev helpers; anything else strips them.
+const environment = process.env.BAWGLE_ENVIRONMENT || "production";
+
 export default defineConfig({
   base: "./",
+  define: {
+    __BAWGLE_ENVIRONMENT__: JSON.stringify(environment),
+  },
   server: {
     port: 5175,
     proxy: {
