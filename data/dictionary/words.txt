@@ -9850,7 +9850,6 @@ eject
 ejected
 ejection
 ejector
-ekg
 elaborate
 elastic
 elasticity
@@ -9913,7 +9912,6 @@ elevators
 eleven
 eleventh
 elf
-eli
 elicit
 elif
 eligibility
@@ -10165,7 +10163,6 @@ enforcement
 enforcer
 enforcers
 enforcing
-eng
 engage
 engaged
 engagement
@@ -14946,7 +14943,6 @@ hyundai
 hyung
 iad
 ibis
-ibm
 ibn
 ibuprofen
 ice
@@ -16083,7 +16079,6 @@ ion
 ionic
 ions
 iota
-iou
 iowa
 ipad
 iphone
@@ -17316,7 +17311,6 @@ legless
 lego
 legs
 legwork
-lei
 leicester
 leigh
 leisure
@@ -20809,7 +20803,6 @@ ointment
 oka
 okada
 okey
-okie
 okra
 oktoberfest
 old
@@ -20819,7 +20812,6 @@ oldest
 oldie
 oldies
 olds
-ole
 olfactory
 olive
 oliver
@@ -22331,7 +22323,6 @@ physiological
 physiology
 physiotherapy
 physique
-pia
 pianist
 piano
 pianos
@@ -24797,7 +24788,6 @@ refused
 refuses
 refusing
 refute
-reg
 regain
 regained
 regaining
@@ -25822,7 +25812,6 @@ rona
 rondo
 ronin
 ronson
-roo
 roof
 roofie
 roofied
@@ -26389,7 +26378,6 @@ saying
 sayings
 sayonara
 says
-saz
 scab
 scabbard
 scabby
@@ -27247,7 +27235,6 @@ sherpas
 sherry
 shes
 shetland
-shi
 shiatsu
 shiba
 shield
@@ -31141,7 +31128,6 @@ tilly
 tilt
 tilted
 tilting
-tim
 timber
 timbers
 time
