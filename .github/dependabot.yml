@@ -1,0 +1,77 @@
+# Dependabot configuration.
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Three ecosystems we actually ship from this repo:
+#   1. pnpm packages — the app's JS/TS deps
+#   2. Docker base image — node:20-alpine in the Dockerfile
+#   3. GitHub Actions — the workflow that builds + publishes the image
+#
+# Updates run weekly so PR volume stays manageable. We group minor +
+# patch bumps together per ecosystem; majors open their own PR so
+# they're easy to review and revert.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Toronto
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - javascript
+    commit-message:
+      prefix: "deps"
+      include: scope
+    groups:
+      # One PR per week for the boring stuff so we don't drown in noise.
+      dev-minor-and-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      prod-minor-and-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+    # Ignore majors via groups above (they fall through and get
+    # their own PRs — easier to review). Explicit per-package ignores
+    # can be added here if a bump ever breaks us.
+    ignore:
+      # Node types lock to the runtime we actually deploy.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Toronto
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "deps(docker)"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Toronto
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "deps(ci)"
+    groups:
+      actions:
+        patterns:
+          - "*"
