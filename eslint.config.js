@@ -43,6 +43,33 @@ export default [
     },
   },
 
+  // Build and test configuration files that run in Node during
+  // build/test. Not part of the shipped bundles.
+  {
+    files: [
+      "vite.config.{js,ts}",
+      "vitest.config.{js,ts}",
+      "eslint.config.{js,ts}",
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
+  // Tests run in Node (vitest), with jsdom opt-in per file. Let them
+  // use Node globals and, for jsdom-mode tests, browser globals too.
+  {
+    files: ["tests/**/*.{js,ts}"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
+    },
+  },
+
   // Shared shims run in both — permit both globals.
   {
     files: ["shared/**/*.{js,ts}"],
