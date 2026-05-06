@@ -14,7 +14,7 @@ export default defineConfig({
     // Default to Node; individual files override to jsdom when they need
     // window / localStorage / DOM APIs.
     environment: "node",
-    include: ["server/**/*.test.ts", "shared/**/*.test.ts", "src/**/*.test.ts"],
+    include: ["tests/**/*.test.ts"],
     // The dictionary/storage tests do real file I/O to a tmp dir. Keep
     // each test file single-threaded against its own fixtures.
     pool: "forks",
@@ -26,6 +26,7 @@ export default defineConfig({
       reporter: ["text", "html"],
       include: ["server/**/*.ts", "shared/**/*.ts", "src/**/*.ts"],
       exclude: [
+        "tests/**",
         "**/*.test.ts",
         "server/admin/assets/**",
         "server/admin/build.ts",

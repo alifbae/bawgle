@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scoreWord } from "./types.ts";
+import { scoreWord } from "../../shared/types.ts";
 
 describe("scoreWord", () => {
   it("returns 0 for words shorter than 3 letters", () => {

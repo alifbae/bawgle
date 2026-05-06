@@ -35,6 +35,20 @@ export interface NetcodeOptions {
   msgBucketSize?: number;
   msgBucketRate?: number;
   heartbeatMs?: number;
+  /**
+   * If set, incoming WebSocket upgrades whose `Origin` header doesn't match
+   * this exact value are rejected with 403. Leave unset for local dev
+   * (tests, curl, file:// origins) where any origin is acceptable.
+   * Multiple origins can be supplied comma-separated.
+   */
+  allowedOrigins?: string[];
+  /**
+   * When true, `X-Forwarded-For` / `X-Real-IP` headers are trusted to
+   * resolve the client IP. When false (default), the socket's remote
+   * address is used — the safe choice whenever the container is exposed
+   * directly to the internet rather than sitting behind a proxy.
+   */
+  trustProxy?: boolean;
 }
 
 export const DEFAULT_NETCODE_OPTIONS: Required<NetcodeOptions> = {
@@ -43,7 +57,12 @@ export const DEFAULT_NETCODE_OPTIONS: Required<NetcodeOptions> = {
   maxConnsPerIp: 10,
   msgBucketSize: 20,
   msgBucketRate: 5,
-  heartbeatMs: 30_000,
+  // 15s is aggressive enough that a hung tab / NAT drop surfaces fast
+  // (one missed pong → terminate on the next tick) without flooding
+  // the network. Browsers handle ping frames invisibly.
+  heartbeatMs: 15_000,
+  allowedOrigins: [],
+  trustProxy: false,
 };
 
 export interface NetcodeHandle {
@@ -53,17 +72,19 @@ export interface NetcodeHandle {
   close(): void;
 }
 
-function clientIp(req: IncomingMessage): string {
-  // nginx sets X-Real-IP / X-Forwarded-For from CF-Connecting-IP, so the
-  // first XFF entry is the true viewer. Fall back to the socket address
-  // for direct-to-container connections (dev, health probes).
-  const xff = req.headers["x-forwarded-for"];
-  if (typeof xff === "string" && xff.length > 0) {
-    const first = xff.split(",")[0]?.trim();
-    if (first) return first;
+function clientIp(req: IncomingMessage, trustProxy: boolean): string {
+  if (trustProxy) {
+    const xff = req.headers["x-forwarded-for"];
+    if (typeof xff === "string" && xff.length > 0) {
+      const first = xff.split(",")[0]?.trim();
+      if (first) return first;
+    }
+    const realIp = req.headers["x-real-ip"];
+    if (typeof realIp === "string" && realIp.length > 0) return realIp;
   }
-  const realIp = req.headers["x-real-ip"];
-  if (typeof realIp === "string" && realIp.length > 0) return realIp;
+  // Default: trust the socket. Safer when the container is ever exposed
+  // directly to the internet — an attacker can spoof headers, not a TCP
+  // source address.
   return req.socket.remoteAddress ?? "unknown";
 }
 
@@ -94,7 +115,23 @@ export function attachNetcode(
       return;
     }
 
-    const ip = clientIp(req);
+    // Origin check. Browsers always send Origin for WebSocket upgrades;
+    // non-browser clients (curl, native) may omit it. If allowedOrigins
+    // is configured we require a match — an empty/missing Origin is
+    // treated as "not allowed" in production mode.
+    if (o.allowedOrigins.length > 0) {
+      const origin = (req.headers.origin ?? "").toString();
+      if (!o.allowedOrigins.includes(origin)) {
+        socket.write(
+          "HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n",
+        );
+        socket.destroy();
+        recordEvent("ws_origin_rejected", { origin });
+        return;
+      }
+    }
+
+    const ip = clientIp(req, o.trustProxy);
     const current = connsByIp.get(ip) ?? 0;
     if (current >= o.maxConnsPerIp) {
       // Respond with a real HTTP status so well-behaved clients stop

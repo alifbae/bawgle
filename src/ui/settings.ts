@@ -1,4 +1,5 @@
 import { dom } from "../dom.ts";
+import { DEV_MIN_ROUND_SECONDS } from "../../shared/types.ts";
 import type { RoomSettings } from "../../shared/types.ts";
 
 type SettingsPartial = Partial<RoomSettings>;
@@ -11,6 +12,14 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function initSettings({ onChange }: { onChange: SendFn }): void {
   send = onChange;
+
+  // Dev builds lower the slider floor so the round can end in seconds.
+  // The server side enforces the same relaxation when
+  // BAWGLE_ENVIRONMENT=development, so the values are always honored.
+  if (__BAWGLE_ENVIRONMENT__ === "development") {
+    dom.roundSlider.min = String(DEV_MIN_ROUND_SECONDS);
+    dom.roundSlider.step = "5";
+  }
 
   const segButtons = dom.sizeSelect.querySelectorAll<HTMLButtonElement>(".seg-btn");
   segButtons.forEach((btn) => {

@@ -36,6 +36,7 @@ export const dom = {
   nameInput: el<HTMLInputElement>("name-input"),
   timer: el<HTMLElement>("timer"),
   playAgainBtn: el<HTMLButtonElement>("play-again-btn"),
+  shareRoundBtn: optionalEl<HTMLButtonElement>("share-round-btn"),
 
   // Theme
   themeBtn: el<HTMLButtonElement>("theme-btn"),

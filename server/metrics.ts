@@ -45,6 +45,8 @@ export type EventType =
   | "room_full"
   | "bad_json"
   | "ws_error"
+  | "ws_origin_rejected"
+  | "admin_action"
   // Word play — only aggregate counters, not individual events, to
   // keep the ring buffer useful (otherwise a single game drowns it).
   // kept here so counter bumps below are typed.

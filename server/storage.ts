@@ -58,6 +58,24 @@ export function initStorage(dbPath: string): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_players_room ON players(room_code);
+
+    -- Immutable round history. Every completed round gets one row.
+    -- Survives room purges so shareable /result links keep working
+    -- after the 72h room TTL or a host clicking "play again."
+    CREATE TABLE IF NOT EXISTS rounds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_code TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      ended_at INTEGER NOT NULL,
+      board_json TEXT NOT NULL,
+      settings_json TEXT NOT NULL,
+      host_id TEXT,
+      players_json TEXT NOT NULL,
+      possible_words_json TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_rounds_room
+      ON rounds(room_code, ended_at DESC);
   `);
 
   // Forward-compatible: add `ready` to older DBs that predate this column.
@@ -233,6 +251,8 @@ export function loadAllRooms(): PersistedRoom[] {
         settings: JSON.parse(r.settings_json),
         possibleCount: r.possible_count,
         possibleWords: JSON.parse(r.possible_words_json),
+        // Restored via rooms.restoreRooms() from the latest round row.
+        lastRoundId: null,
       },
       solved: JSON.parse(r.solved_json),
     };
@@ -244,4 +264,120 @@ export function closeStorage(): void {
     db.close();
     db = null;
   }
+}
+
+// ─── Round history ──────────────────────────────────────────────────
+// Rounds are immutable: inserted once by rooms.endRound(), never
+// updated. Retained independently of the room's lifecycle so shareable
+// links survive the 72h room TTL.
+
+export interface RoundInsert {
+  roomCode: string;
+  startedAt: number;
+  endedAt: number;
+  board: string[];
+  settings: unknown;
+  hostId: string | null;
+  players: unknown; // snapshot array; caller serializes
+  possibleWords: string[];
+}
+
+export interface StoredRound {
+  id: number;
+  roomCode: string;
+  startedAt: number;
+  endedAt: number;
+  board: string[];
+  settings: unknown;
+  hostId: string | null;
+  players: unknown;
+  possibleWords: string[];
+}
+
+/** Insert a completed round and return its new id. */
+export function insertRound(r: RoundInsert): number {
+  const d = requireDb();
+  const info = d
+    .prepare(
+      `INSERT INTO rounds
+         (room_code, started_at, ended_at, board_json, settings_json,
+          host_id, players_json, possible_words_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      r.roomCode,
+      r.startedAt,
+      r.endedAt,
+      JSON.stringify(r.board),
+      JSON.stringify(r.settings),
+      r.hostId,
+      JSON.stringify(r.players),
+      JSON.stringify(r.possibleWords)
+    );
+  return Number(info.lastInsertRowid);
+}
+
+function parseRound(row: {
+  id: number;
+  room_code: string;
+  started_at: number;
+  ended_at: number;
+  board_json: string;
+  settings_json: string;
+  host_id: string | null;
+  players_json: string;
+  possible_words_json: string;
+}): StoredRound {
+  return {
+    id: row.id,
+    roomCode: row.room_code,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    board: JSON.parse(row.board_json),
+    settings: JSON.parse(row.settings_json),
+    hostId: row.host_id,
+    players: JSON.parse(row.players_json),
+    possibleWords: JSON.parse(row.possible_words_json),
+  };
+}
+
+/** Fetch a single round by its numeric id. */
+export function getRoundById(id: number): StoredRound | null {
+  const d = requireDb();
+  const row = d
+    .prepare(
+      `SELECT id, room_code, started_at, ended_at, board_json,
+              settings_json, host_id, players_json, possible_words_json
+       FROM rounds WHERE id = ?`
+    )
+    .get(id) as Parameters<typeof parseRound>[0] | undefined;
+  return row ? parseRound(row) : null;
+}
+
+/** Fetch the most recent round for a room code, or null if none. */
+export function getLatestRoundForRoom(roomCode: string): StoredRound | null {
+  const d = requireDb();
+  const row = d
+    .prepare(
+      `SELECT id, room_code, started_at, ended_at, board_json,
+              settings_json, host_id, players_json, possible_words_json
+       FROM rounds
+       WHERE room_code = ?
+       ORDER BY ended_at DESC
+       LIMIT 1`
+    )
+    .get(roomCode) as Parameters<typeof parseRound>[0] | undefined;
+  return row ? parseRound(row) : null;
+}
+
+/**
+ * Delete rounds older than `maxAgeMs`. Returns the number of rows
+ * dropped. Called by the daily sweeper so round history doesn't grow
+ * unbounded.
+ */
+export function pruneOldRounds(maxAgeMs: number, now = Date.now()): number {
+  const d = requireDb();
+  const cutoff = now - maxAgeMs;
+  const info = d.prepare("DELETE FROM rounds WHERE ended_at < ?").run(cutoff);
+  return info.changes;
 }

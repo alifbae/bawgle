@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escape } from "./escape.ts";
+import { escape } from "../../../src/util/escape.ts";
 
 describe("escape", () => {
   it("escapes the five standard HTML entities", () => {

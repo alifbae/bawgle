@@ -3,10 +3,16 @@ import { Hono } from "hono";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, extname } from "node:path";
-import { restoreRooms, startRoomSweeper } from "./rooms.ts";
+import {
+  restoreRooms,
+  startRoomSweeper,
+  fetchLatestRoundForRoom,
+  fetchRoundById,
+  getRoomPhase,
+} from "./rooms.ts";
 import { loadDictionary, lookupDefinition } from "./dictionary.ts";
 import { bumpCounter, configureLogging, sweepLogs } from "./metrics.ts";
-import { closeStorage, initStorage } from "./storage.ts";
+import { closeStorage, initStorage, pruneOldRounds } from "./storage.ts";
 import { adminEnabled, registerAdminRoutes } from "./admin/index.ts";
 import { attachNetcode } from "./netcode.ts";
 
@@ -34,6 +40,7 @@ const LOG_DIR =
     ? null
     : process.env.BAWGLE_LOG_DIR || join(DATA_DIR, "logs");
 const LOG_RETENTION_DAYS = Number(process.env.BAWGLE_LOG_RETENTION_DAYS || 30);
+const ROUND_RETENTION_DAYS = Number(process.env.BAWGLE_ROUND_RETENTION_DAYS || 30);
 
 loadDictionary();
 initStorage(DB_PATH);
@@ -44,8 +51,48 @@ startRoomSweeper();
 // is unref()ed so it doesn't keep the process alive during shutdown.
 sweepLogs();
 setInterval(sweepLogs, 24 * 60 * 60 * 1000).unref();
+// Same cadence for round history. Retention is independent from logs
+// so operators can tune them separately.
+function sweepRounds(): void {
+  try {
+    const removed = pruneOldRounds(ROUND_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    if (removed > 0) {
+      console.log(
+        `[bawgle] round sweep: removed ${removed} round(s) older than ${ROUND_RETENTION_DAYS}d`,
+      );
+    }
+  } catch (err) {
+    console.error("[bawgle] round sweep failed:", (err as Error).message);
+  }
+}
+sweepRounds();
+setInterval(sweepRounds, 24 * 60 * 60 * 1000).unref();
 
 const app = new Hono();
+
+// Security headers on every response. Applied first so even 404s ship
+// with them. CSP is scoped to the origins the SPA actually uses
+// (self, Google Fonts, Cloudflare Insights). `frame-ancestors 'none'`
+// belts-and-suspenders with X-Frame-Options for older browsers.
+const SECURITY_HEADERS_CSP =
+  "default-src 'self'; " +
+  "script-src 'self' https://static.cloudflareinsights.com; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+  "font-src 'self' https://fonts.gstatic.com; " +
+  "img-src 'self' data:; " +
+  "connect-src 'self' https://cloudflareinsights.com wss: ws:; " +
+  "frame-ancestors 'none'; " +
+  "base-uri 'self'; " +
+  "form-action 'self'";
+
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  c.header("Content-Security-Policy", SECURITY_HEADERS_CSP);
+});
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
@@ -67,6 +114,41 @@ app.get("/api/define/:word", (c) => {
   const result = lookupDefinition(word);
   if (!result) return c.json({ word, defs: [] });
   return c.json(result);
+});
+
+// Shareable round history. Two flavors:
+//   /api/round/:id             — a specific round by id. Stable URL;
+//                                survives room purge and restarts.
+//   /api/room/:code/round      — the most recent round for a room,
+//                                useful when the caller only knows the
+//                                room code.
+//
+// Both return the same payload shape so the client can render either
+// via one code path.
+app.get("/api/round/:id", (c) => {
+  const raw = c.req.param("id") ?? "";
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) {
+    return c.json({ status: "not_found" }, 404);
+  }
+  const round = fetchRoundById(id);
+  if (!round) return c.json({ status: "not_found" }, 404);
+  return c.json({ status: "ok", round });
+});
+
+app.get("/api/room/:code/round", (c) => {
+  const raw = c.req.param("code") ?? "";
+  const code = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+  if (!code) return c.json({ status: "not_found" }, 404);
+
+  const round = fetchLatestRoundForRoom(code);
+  if (round) return c.json({ status: "ok", round });
+
+  // No history yet — distinguish "room exists mid-play" from "unknown"
+  // so the client can show the right empty state.
+  const phase = getRoomPhase(code);
+  if (phase === null) return c.json({ status: "not_found" }, 404);
+  return c.json({ status: "in_progress", phase }, 200);
 });
 
 const MIME: Record<string, string> = {
@@ -103,7 +185,16 @@ const httpServer = createAdaptorServer({ fetch: app.fetch });
 
 // Wire up the WebSocket upgrade path + abuse controls. All behavior
 // lives in ./netcode.ts so it can be exercised in isolation from tests.
-attachNetcode(httpServer);
+const ALLOWED_ORIGINS = (process.env.BAWGLE_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const TRUST_PROXY = process.env.BAWGLE_TRUST_PROXY === "1";
+
+attachNetcode(httpServer, {
+  allowedOrigins: ALLOWED_ORIGINS,
+  trustProxy: TRUST_PROXY,
+});
 
 httpServer.listen(PORT, () => {
   console.log(`[bawgle] listening on :${PORT}`);
@@ -111,6 +202,16 @@ httpServer.listen(PORT, () => {
   if (IS_DEV) {
     console.log("[bawgle] dev mode: window.bawgleDev is available in the browser console");
   }
+  if (ALLOWED_ORIGINS.length > 0) {
+    console.log(`[bawgle] WebSocket origin allowlist: ${ALLOWED_ORIGINS.join(", ")}`);
+  } else {
+    console.log(
+      "[bawgle] WebSocket origin check DISABLED (set BAWGLE_ALLOWED_ORIGINS to enable)",
+    );
+  }
+  console.log(
+    `[bawgle] proxy trust=${TRUST_PROXY ? "on" : "off"} (set BAWGLE_TRUST_PROXY=1 when behind a reverse proxy)`,
+  );
   if (!adminEnabled) {
     console.log("[bawgle] admin dashboard DISABLED (set BAWGLE_ADMIN_PASS to enable)");
   } else {

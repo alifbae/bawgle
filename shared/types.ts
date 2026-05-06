@@ -25,9 +25,18 @@ export interface RoomSettings {
 
 export const SETTINGS_LIMITS = {
   minRoundSeconds: 60,
+  // Development builds bend the lower bound for fast iteration: see
+  // DEV_MIN_ROUND_SECONDS below. Production always clamps at 60.
   maxRoundSeconds: 300,
   sizes: [4, 5, 6] as const,
 };
+
+/**
+ * Relaxed lower bound used when BAWGLE_ENVIRONMENT=development.
+ * 5 seconds is short enough to end a round manually in a single click
+ * while still giving the client a visible countdown.
+ */
+export const DEV_MIN_ROUND_SECONDS = 5;
 
 export const DEFAULT_SETTINGS: RoomSettings = {
   roundSeconds: 180,
@@ -44,6 +53,10 @@ export interface RoomState {
   settings: RoomSettings;
   possibleCount: number;
   possibleWords: string[];
+  // Numeric id of the most recent completed round, if any. Clients use
+  // this to generate stable /result?round=N share links. Null until the
+  // first round of the session ends.
+  lastRoundId: number | null;
 }
 
 /* Client -> server */

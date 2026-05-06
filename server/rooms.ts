@@ -2,6 +2,7 @@ import { WebSocket } from "ws";
 import { rollBoard, wordPathExists } from "../shared/board.ts";
 import {
   DEFAULT_SETTINGS,
+  DEV_MIN_ROUND_SECONDS,
   SETTINGS_LIMITS,
   scoreWord,
   type Player,
@@ -11,7 +12,16 @@ import {
 } from "../shared/types.ts";
 import { isWord, solveBoard } from "./dictionary.ts";
 import { recordEvent } from "./metrics.ts";
-import { deleteRoom, findStaleRoomCodes, loadAllRooms, saveRoom } from "./storage.ts";
+import {
+  deleteRoom,
+  findStaleRoomCodes,
+  getLatestRoundForRoom,
+  getRoundById,
+  insertRound,
+  loadAllRooms,
+  saveRoom,
+  type StoredRound,
+} from "./storage.ts";
 
 interface RoomConn {
   ws: WebSocket;
@@ -27,6 +37,13 @@ interface Room {
   // transient host transfer moves the crown, this lets us give it back
   // when they reconnect instead of permanently demoting them.
   originalHostId: string | null;
+  // ID of the most recent persisted round for this room, set when
+  // endRound() inserts into the `rounds` table. Used by the live
+  // results screen to generate a stable share link.
+  lastRoundId: number | null;
+  // Timestamp the current round started; preserved for persistence
+  // into the rounds table so share links show accurate timing.
+  roundStartedAt: number | null;
 }
 
 const rooms = new Map<string, Room>();
@@ -54,23 +71,54 @@ function makeId() {
 }
 
 function send(ws: WebSocket, msg: ServerMsg) {
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+  if (ws.readyState !== ws.OPEN) return;
+  try {
+    ws.send(JSON.stringify(msg));
+  } catch {
+    // Half-closed socket (TCP RST race, queue full) — let the close
+    // handler reap it. Don't propagate; a send failure to one peer
+    // shouldn't take down the whole broadcast.
+    try {
+      ws.terminate();
+    } catch {
+      /* already gone */
+    }
+  }
 }
 
 function broadcast(room: Room, msg: ServerMsg) {
   const payload = JSON.stringify(msg);
   for (const { ws } of room.conns.values()) {
-    if (ws.readyState === ws.OPEN) ws.send(payload);
+    if (ws.readyState !== ws.OPEN) continue;
+    try {
+      ws.send(payload);
+    } catch {
+      // Same deal as `send` above: if one recipient's socket is wedged
+      // we forcibly close it so the per-room conns map catches up.
+      try {
+        ws.terminate();
+      } catch {
+        /* already gone */
+      }
+    }
   }
 }
 
 function publicState(room: Room): RoomState {
-  return { ...room.state, players: room.state.players.map((p) => ({ ...p })) };
+  return {
+    ...room.state,
+    lastRoundId: room.lastRoundId,
+    players: room.state.players.map((p) => ({ ...p })),
+  };
 }
 
 function persist(room: Room) {
   try {
-    saveRoom({ code: room.state.code, state: room.state, solved: room.solved });
+    saveRoom({
+      code: room.state.code,
+      state: room.state,
+      solved: room.solved,
+    });
   } catch (err) {
     // Persist can fail during shutdown if storage has been closed while
     // a socket teardown is still draining. Swallow "not initialized"
@@ -96,11 +144,14 @@ function getOrCreateRoom(code: string): Room | null {
         settings: { ...DEFAULT_SETTINGS },
         possibleCount: 0,
         possibleWords: [],
+        lastRoundId: null,
       },
       conns: new Map(),
       timer: null,
       solved: [],
       originalHostId: null,
+      lastRoundId: null,
+      roundStartedAt: null,
     };
     rooms.set(code, room);
     persist(room);
@@ -151,7 +202,11 @@ export function joinRoom(
 
     if (!room.state.hostId) {
       room.state.hostId = existing.id;
-      room.originalHostId = existing.id;
+      // Only seed originalHostId if it hasn't been set yet. A mid-
+      // session crown transfer (host drops, someone else becomes
+      // host, original reconnects) must NOT overwrite the record
+      // of who owns the room.
+      if (!room.originalHostId) room.originalHostId = existing.id;
     } else if (wasOriginalHost && room.state.hostId !== existing.id) {
       room.state.hostId = existing.id;
     }
@@ -200,7 +255,11 @@ export function joinRoom(
   room.conns.set(playerId, { ws, playerId });
   if (!room.state.hostId) {
     room.state.hostId = playerId;
-    room.originalHostId = playerId;
+    // Preserve the original host marker across transient drops.
+    // If someone has owned this room before, they get the crown back
+    // when they reconnect — we shouldn't overwrite that just because
+    // a new arrival is the only live player right now.
+    if (!room.originalHostId) room.originalHostId = playerId;
   }
 
   send(ws, {
@@ -251,12 +310,18 @@ export function updateSettings(
   if (room.state.phase === "playing") return;
 
   const cur = room.state.settings;
+  // Dev builds let hosts drop the round to a few seconds for quick
+  // results-screen iteration. Production keeps the strict 60s floor.
+  const minRoundSeconds =
+    process.env.BAWGLE_ENVIRONMENT === "development"
+      ? DEV_MIN_ROUND_SECONDS
+      : SETTINGS_LIMITS.minRoundSeconds;
   const merged: RoomSettings = {
     roundSeconds:
       typeof next.roundSeconds === "number"
         ? clamp(
             Math.round(next.roundSeconds),
-            SETTINGS_LIMITS.minRoundSeconds,
+            minRoundSeconds,
             SETTINGS_LIMITS.maxRoundSeconds
           )
         : cur.roundSeconds,
@@ -301,6 +366,7 @@ export function startRound(room: Room, requesterId?: string) {
   room.state.possibleCount = room.solved.length;
   room.state.possibleWords = [];
   room.state.endsAt = Date.now() + roundSeconds * 1000;
+  room.roundStartedAt = Date.now();
   room.state.phase = "playing";
 
   if (room.timer) clearTimeout(room.timer);
@@ -318,15 +384,46 @@ export function startRound(room: Room, requesterId?: string) {
 }
 
 function endRound(room: Room) {
+  const endedAt = Date.now();
   room.state.phase = "results";
   room.state.endsAt = null;
   room.state.possibleWords = room.solved;
   // Clear ready flags so next round requires everyone to confirm again.
   for (const p of room.state.players) p.ready = false;
+
+  // Persist the completed round to the history table. We capture a
+  // deep copy of players so later mutations (play-again resets scores)
+  // don't retroactively change the record.
+  try {
+    const roundId = insertRound({
+      roomCode: room.state.code,
+      startedAt: room.roundStartedAt ?? endedAt,
+      endedAt,
+      board: room.state.board ? [...room.state.board] : [],
+      settings: { ...room.state.settings },
+      hostId: room.state.hostId,
+      players: room.state.players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        words: [...p.words],
+      })),
+      possibleWords: [...room.solved],
+    });
+    room.lastRoundId = roundId;
+  } catch (err) {
+    // Storage failure at shutdown shouldn't kill the round-end broadcast.
+    const msg = (err as Error).message;
+    if (!/not initialized/i.test(msg)) {
+      console.error("[bawgle] failed to persist round:", msg);
+    }
+  }
+
   emitState(room);
   persist(room);
   recordEvent("round_end", {
     code: room.state.code,
+    roundId: room.lastRoundId,
     topScore: Math.max(0, ...room.state.players.map((p) => p.score)),
     foundCount: room.state.players.reduce((sum, p) => sum + p.words.length, 0),
     possibleCount: room.solved.length,
@@ -428,14 +525,20 @@ export function submitWord(
 export function restoreRooms(): void {
   const rows = loadAllRooms();
   for (const { code, state, solved } of rows) {
+    // Re-seed lastRoundId from the most recent persisted round, so
+    // clients that reconnect into a lobby still see the previous
+    // round's id for a share link.
+    const lastRound = getLatestRoundForRoom(code);
     const room: Room = {
-      state,
+      state: { ...state, lastRoundId: lastRound?.id ?? null },
       conns: new Map(),
       timer: null,
       solved,
       // Treat the persisted host as the original on restore. A subsequent
       // leaveRoom may transfer the crown temporarily; reconnect restores it.
       originalHostId: state.hostId,
+      lastRoundId: lastRound?.id ?? null,
+      roundStartedAt: null,
     };
     rooms.set(code, room);
 
@@ -511,6 +614,29 @@ export function purgeRoom(code: string) {
   rooms.delete(code);
   deleteRoom(code);
   recordEvent("room_purged", { code, reason: "manual" });
+}
+
+/**
+ * Fetch a specific round by its numeric id. Use for /result?round=N
+ * share links — lookup survives room purge and server restart.
+ */
+export function fetchRoundById(id: number): StoredRound | null {
+  return getRoundById(id);
+}
+
+/**
+ * Fetch the most recent completed round for a room code. Use for
+ * /result?room=XXXX share links where the caller doesn't know a
+ * specific round id.
+ */
+export function fetchLatestRoundForRoom(code: string): StoredRound | null {
+  return getLatestRoundForRoom(code.toUpperCase());
+}
+
+/** Best-effort read of a room's live phase for disambiguating empty states. */
+export function getRoomPhase(code: string): RoomState["phase"] | null {
+  const room = rooms.get(code.toUpperCase());
+  return room ? room.state.phase : null;
 }
 
 /**

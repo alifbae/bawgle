@@ -93,6 +93,7 @@ function defaultState(overrides: SeedOptions = {}): RoomState {
     },
     possibleCount: (overrides.possibleWords ?? DEFAULT_POSSIBLE_4X4).length,
     possibleWords: overrides.possibleWords ?? DEFAULT_POSSIBLE_4X4,
+    lastRoundId: null,
   };
 }
 

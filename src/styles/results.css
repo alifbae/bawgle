@@ -192,3 +192,51 @@
   filter: none;
   font-variant-numeric: tabular-nums;
 }
+
+/* Button row under the results body — share + play-again side by side
+   on wide screens, stacked on narrow. */
+.results-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.results-actions .btn {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+}
+
+.share-btn {
+  /* Secondary styling — clearly subordinate to "play again" but still
+     obvious. Reuses the base .btn outlined look. */
+  font-weight: 600;
+}
+
+/* Standalone /result share page. No board, no controls — just the
+   results grid and a link back home. */
+.is-result-page .topbar .theme-btn {
+  /* Theme toggle still useful on share page for dark-mode folks. */
+}
+
+.result-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--c-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.result-empty p {
+  max-width: 32rem;
+  line-height: 1.5;
+}
+
+.result-home-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}

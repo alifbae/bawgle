@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 async function freshMetrics() {
   vi.resetModules();
-  return import("./metrics.ts");
+  return import("../../server/metrics.ts");
 }
 
 describe("metrics — counters and ring buffer", () => {

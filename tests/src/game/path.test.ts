@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPathStore, isAdjacent, neighbors, setBoardSize } from "./path.ts";
+import { createPathStore, isAdjacent, neighbors, setBoardSize } from "../../../src/game/path.ts";
 
 describe("isAdjacent / neighbors", () => {
   beforeEach(() => setBoardSize(4));

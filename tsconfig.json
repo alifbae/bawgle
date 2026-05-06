@@ -13,5 +13,5 @@
     "isolatedModules": true,
     "useDefineForClassFields": true
   },
-  "include": ["server/**/*", "shared/**/*", "src/**/*", "vite.config.*"]
+  "include": ["server/**/*", "shared/**/*", "src/**/*", "tests/**/*", "vite.config.*"]
 }

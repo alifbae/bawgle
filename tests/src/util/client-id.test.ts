@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { getClientId, setClientId } from "./client-id.ts";
+import { getClientId, setClientId } from "../../../src/util/client-id.ts";
 
 describe("client-id", () => {
   beforeEach(() => {

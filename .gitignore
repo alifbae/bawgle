@@ -20,3 +20,10 @@ server/admin/assets/app.js
 
 # Cached Wiktionary dump + frequency list (rebuilt on demand)
 .cache/
+
+# IDE / local config
+.kiro/
+
+# Runtime event logs (JSONL, one per day, retained per BAWGLE_LOG_RETENTION_DAYS)
+data/logs/
+*.jsonl
