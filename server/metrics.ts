@@ -35,6 +35,7 @@ export type EventType =
   // Room lifecycle
   | "join"
   | "leave"
+  | "round_countdown"
   | "round_start"
   | "round_end"
   | "room_purged"

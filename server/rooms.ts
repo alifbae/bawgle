@@ -139,6 +139,7 @@ function getOrCreateRoom(code: string): Room | null {
         phase: "lobby",
         board: null,
         endsAt: null,
+        startsAt: null,
         players: [],
         hostId: null,
         settings: { ...DEFAULT_SETTINGS },
@@ -344,9 +345,17 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+// How long the pre-round countdown lasts. Long enough that remote
+// players can see it and bring hands back to the board, short enough
+// it doesn't drag.
+const COUNTDOWN_MS = 5_000;
+
 export function startRound(room: Room, requesterId?: string) {
   if (room.state.phase === "playing") return;
   if (requesterId && requesterId !== room.state.hostId) return;
+  // Host pressing "start" again while the countdown is already running
+  // is a no-op rather than a reset, to keep remote players in sync.
+  if (room.state.startsAt !== null) return;
 
   // Everyone who's connected (except the host) must be ready. The host
   // clicking "start" implies readiness.
@@ -354,6 +363,30 @@ export function startRound(room: Room, requesterId?: string) {
   if (connected.length === 0) return;
   const others = connected.filter((p) => p.id !== room.state.hostId);
   if (others.some((p) => !p.ready)) return;
+
+  // Enter the countdown. Actual round setup (board roll, solver run)
+  // is deferred to the timer so `startsAt` is the only mutation every
+  // client needs to react to.
+  room.state.startsAt = Date.now() + COUNTDOWN_MS;
+  if (room.timer) clearTimeout(room.timer);
+  room.timer = setTimeout(() => beginRound(room), COUNTDOWN_MS);
+  emitState(room);
+  persist(room);
+  recordEvent("round_countdown", {
+    code: room.state.code,
+    durationMs: COUNTDOWN_MS,
+  });
+}
+
+/**
+ * Transition the room from countdown into the actual round. Called by
+ * the setTimeout scheduled in `startRound`. Players' scores and word
+ * lists reset here — we wait until the countdown actually fires so a
+ * host clicking start by accident and nobody else being ready doesn't
+ * wipe the lobby. (startRound guards that, but belt-and-suspenders.)
+ */
+function beginRound(room: Room) {
+  room.state.startsAt = null;
 
   const { size, roundSeconds } = room.state.settings;
 
@@ -452,6 +485,7 @@ export function returnToLobby(room: Room, requesterId?: string) {
   room.state.phase = "lobby";
   room.state.board = null;
   room.state.endsAt = null;
+  room.state.startsAt = null;
   room.state.possibleWords = [];
   room.state.possibleCount = 0;
   for (const p of room.state.players) {
@@ -530,7 +564,13 @@ export function restoreRooms(): void {
     // round's id for a share link.
     const lastRound = getLatestRoundForRoom(code);
     const room: Room = {
-      state: { ...state, lastRoundId: lastRound?.id ?? null },
+      state: {
+        ...state,
+        lastRoundId: lastRound?.id ?? null,
+        // A pending countdown is tied to a live timer; discard it on
+        // restart rather than rescheduling.
+        startsAt: null,
+      },
       conns: new Map(),
       timer: null,
       solved,
@@ -617,6 +657,18 @@ export function purgeRoom(code: string) {
 }
 
 /**
+ * Test hook: synchronously skip the pre-round countdown and enter
+ * the playing phase. Used by existing tests that predate the
+ * countdown and assume startRound → playing is one call. Production
+ * code never invokes this.
+ */
+export function __beginRoundForTests(room: Room): void {
+  if (room.state.startsAt === null) return;
+  if (room.timer) clearTimeout(room.timer);
+  beginRound(room);
+}
+
+/**
  * Fetch a specific round by its numeric id. Use for /result?round=N
  * share links — lookup survives room purge and server restart.
  */
@@ -637,6 +689,23 @@ export function fetchLatestRoundForRoom(code: string): StoredRound | null {
 export function getRoomPhase(code: string): RoomState["phase"] | null {
   const room = rooms.get(code.toUpperCase());
   return room ? room.state.phase : null;
+}
+
+/**
+ * Higher-level status derived from room state. Used by the shared
+ * /result page to show a coloured badge next to the room code.
+ *
+ *   active   — someone is connected OR a round is live
+ *   inactive — room exists but idle (no live connections, not playing)
+ *   closed   — room was purged (or never existed)
+ */
+export type RoomStatus = "active" | "inactive" | "closed";
+
+export function getRoomStatus(code: string): RoomStatus {
+  const room = rooms.get(code.toUpperCase());
+  if (!room) return "closed";
+  if (room.conns.size > 0 || room.state.phase === "playing") return "active";
+  return "inactive";
 }
 
 /**

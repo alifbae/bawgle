@@ -246,6 +246,7 @@ export function loadAllRooms(): PersistedRoom[] {
         phase: r.phase,
         board,
         endsAt: r.ends_at,
+        startsAt: null,
         players,
         hostId: r.host_id,
         settings: JSON.parse(r.settings_json),

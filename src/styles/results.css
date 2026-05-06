@@ -204,8 +204,9 @@
 }
 
 .results-actions .btn {
-  flex: 1 1 12rem;
+  flex: 0 1 50%;
   min-width: 8rem;
+  max-width: 50%;
 }
 
 .share-btn {
@@ -239,4 +240,270 @@
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  /* On the share page the play-again button is hidden, so this link
+     is the only action. Center it in its row at 50% width. */
+  flex: 0 1 50%;
+  margin: 0 auto;
+  min-width: 10rem;
+  max-width: 50%;
+}
+
+/* Results-screen board preview. Same tile styling as the live board,
+   just positioned above the results grid and read-only (dice buttons
+   still render; pointer-events disabled so users don't try to type). */
+.results-board-wrap {
+  margin: 0 auto 1rem;
+  /* Preview is supplementary to the scoreboard — keep it compact so the
+     player names and word pills stay the focus. */
+  max-width: min(16rem, 70vw);
+  width: 100%;
+}
+
+/* The board grid inherits .board rules but needs its own max-width
+   override to match the wrap — otherwise it expands to 480px and the
+   wrap clips it. */
+.results-board-wrap .board {
+  max-width: 100%;
+  gap: 6px;
+}
+
+/* Cap labels in the preview scale off the tile size, not the viewport,
+   so letters stay readable in 5x5 and 6x6 layouts. Slightly larger
+   than the default body font so the tiles remain the visual anchor. */
+.results-board-wrap .cap-label {
+  font-size: clamp(1.15rem, 8cqi, 2.25rem);
+}
+
+/* Opt the board into container queries so `cqi` above measures against
+   the wrap instead of the viewport. */
+.results-board-wrap {
+  container-type: inline-size;
+}
+
+.results-board-wrap .die {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Chips become interactive on the results screen so users can hover
+   them to trace paths. Give a subtle cue on hover. */
+#results-body [data-word] {
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+#results-body [data-word]:hover,
+#results-body [data-word]:focus-visible {
+  border-color: var(--c-accent);
+}
+
+/* Pinned chip (click/tap selected): stronger styling than hover so it
+   reads as persistent. Survives pointer-out. */
+#results-body [data-word].is-active {
+  border-color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 15%, var(--c-bg));
+}
+
+/* Share-page meta header. Replaces the generic "round over" title with
+   a labelled row per field so Room / Round / Date read clearly. Each
+   row is a flex pair with labels in a fixed-width column so the
+   values line up vertically. */
+.results-title.results-meta {
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-align: left;
+  color: var(--c-fg);
+  margin-bottom: 0.75rem;
+}
+
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  /* Full-width inside the stack — no narrow cap so the container
+     sits across the whole results column. */
+  width: 100%;
+}
+
+.meta-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.meta-date {
+  align-self: flex-start;
+}
+
+/* Desktop: split Room/Round on the left, Date on the right, same baseline. */
+@media (min-width: 600px) {
+  .meta-list {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  .meta-main {
+    flex: 1 1 auto;
+  }
+  .meta-date {
+    align-self: flex-start;
+    text-align: right;
+  }
+  .meta-date dt {
+    /* Stack label above value on the right-hand side so tabular data
+       still reads top-down instead of cramming into one line. */
+    display: block;
+    margin-bottom: 0.1rem;
+  }
+}
+
+.meta-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  line-height: 1.4;
+}
+
+/* On the date row at desktop widths, drop the grid in favour of a
+   simple stacked label-then-value so the right-aligned block reads
+   cleanly without a dangling label column. */
+@media (min-width: 600px) {
+  .meta-date {
+    display: block;
+    grid-template-columns: none;
+  }
+  .meta-date dt {
+    grid-column: auto;
+  }
+  .meta-date dd {
+    grid-column: auto;
+    white-space: nowrap;
+  }
+}
+
+.meta-row dt {
+  font-weight: 600;
+  color: var(--c-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.meta-row dd {
+  margin: 0;
+  color: var(--c-fg);
+}
+
+.meta-row code {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--c-accent);
+  letter-spacing: 0.05em;
+}
+
+/* Room status pill beside the room code. One small dot + label so the
+   colour does the heavy lifting without taking much horizontal space. */
+.room-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  line-height: 1.4;
+}
+
+.room-status::before {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.room-status-active {
+  color: var(--c-good, #16a34a);
+  background: color-mix(in srgb, var(--c-good, #16a34a) 14%, var(--c-panel));
+  border-color: color-mix(in srgb, var(--c-good, #16a34a) 45%, transparent);
+}
+
+.room-status-inactive {
+  color: var(--c-muted, #6b7280);
+  background: color-mix(in srgb, var(--c-muted, #6b7280) 14%, var(--c-panel));
+  border-color: color-mix(in srgb, var(--c-muted, #6b7280) 45%, transparent);
+}
+
+.room-status-closed {
+  color: var(--c-bad, #dc2626);
+  background: color-mix(in srgb, var(--c-bad, #dc2626) 14%, var(--c-panel));
+  border-color: color-mix(in srgb, var(--c-bad, #dc2626) 45%, transparent);
+}
+
+/* "Back to room" link wrapping the code + status pill in the meta
+   block. No underline — the pill is the call to action. Tap target
+   stays comfortable without inflating the visual. */
+.room-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.1rem 0.3rem;
+  margin: -0.1rem -0.3rem;
+  border-radius: 6px;
+  transition: background 120ms ease;
+}
+
+.room-link:hover,
+.room-link:focus-visible {
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+}
+
+.room-link code {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--c-accent);
+  letter-spacing: 0.05em;
+}
+
+/* Status pill stays its own size regardless of the link context. */
+.room-link .room-status {
+  margin-left: 0;
+}
+
+/* 404 page — reuses the results-empty layout with a big numeric focal
+   point. */
+.not-found-big {
+  font-family: var(--font-mono);
+  font-size: clamp(3rem, 18vw, 6rem);
+  font-weight: 700;
+  color: var(--c-accent);
+  margin: 0;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.is-404-page .result-empty code {
+  font-family: var(--font-mono);
+  color: var(--c-muted);
+  background: var(--c-panel);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
 }

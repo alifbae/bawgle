@@ -37,10 +37,16 @@ export const dom = {
   timer: el<HTMLElement>("timer"),
   playAgainBtn: el<HTMLButtonElement>("play-again-btn"),
   shareRoundBtn: optionalEl<HTMLButtonElement>("share-round-btn"),
+  resultsBoard: el<HTMLElement>("results-board"),
+  resultsBoardTrail: el<SVGElement>("results-board-trail"),
+  resultsBoardWrap: el<HTMLElement>("results-board-wrap"),
 
   // Theme
   themeBtn: el<HTMLButtonElement>("theme-btn"),
   themeName: el<HTMLElement>("theme-name"),
+
+  // Audio mute toggle in the topbar
+  muteBtn: optionalEl<HTMLButtonElement>("mute-btn"),
 
   // Lobby
   tabs: document.querySelectorAll<HTMLButtonElement>(".tab"),

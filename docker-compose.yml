@@ -3,15 +3,6 @@
 # Pulls the prebuilt image from GHCR and joins the shared `internal`
 # Docker network so a reverse proxy fronts it. No host ports exposed.
 #
-# Required in .env (or shell env):
-#   BAWGLE_ADMIN_PASS         — without this, /admin returns 401 for all
-#
-# Optional in .env (sensible defaults below):
-#   BAWGLE_ADMIN_USER         — default `admin`
-#   BAWGLE_ALLOWED_ORIGINS    — comma-separated WebSocket origin allowlist
-#   PUID / PGID               — default 1000:1000
-#   TZ                        — default America/Toronto
-#
 #   docker compose pull && docker compose up -d
 
 services:
@@ -19,14 +10,12 @@ services:
     image: ghcr.io/alifbae/bawgle:latest
     container_name: bawgle
     restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-America/Toronto}
+      - TZ=America/Toronto
       - BAWGLE_TRUST_PROXY=1
-      - BAWGLE_ADMIN_USER=${BAWGLE_ADMIN_USER:-admin}
-      - BAWGLE_ADMIN_PASS=${BAWGLE_ADMIN_PASS}
-      - BAWGLE_ALLOWED_ORIGINS=${BAWGLE_ALLOWED_ORIGINS}
     volumes:
       - ./data:/data
     networks:

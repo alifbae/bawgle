@@ -18,8 +18,8 @@ export function startTicker(getEndsAt: () => number | null | undefined): void {
     const remain = Math.max(0, endsAt - Date.now());
     const s = Math.floor(remain / 1000);
     dom.timer.textContent = `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-    // Flag the last 10% of the round so CSS can turn it red and pulse.
-    dom.timer.classList.toggle("low", totalMs > 0 && remain <= totalMs * 0.1);
+    // Flag the last 15% of the round so CSS can turn it red and pulse.
+    dom.timer.classList.toggle("low", totalMs > 0 && remain <= totalMs * 0.15);
   };
   update();
   tickerId = setInterval(update, 250);

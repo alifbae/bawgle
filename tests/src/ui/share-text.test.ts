@@ -20,6 +20,7 @@ function mkState(overrides: Partial<RoomState> = {}): RoomState {
     phase: "results",
     board: null,
     endsAt: null,
+    startsAt: null,
     players: [],
     hostId: null,
     settings: { roundSeconds: 180, size: 4 },

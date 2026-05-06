@@ -17,6 +17,10 @@ import { renderPlayers } from "./ui/players.ts";
 import { renderResults, renderMyWords } from "./ui/words.ts";
 import { renderBoard } from "./ui/board.ts";
 import { armPlayAgain, disarmPlayAgain } from "./ui/play-again.ts";
+import {
+  installResultsPreview,
+  uninstallResultsPreview,
+} from "./ui/results-preview.ts";
 import type { Player, RoomState } from "../shared/types.ts";
 
 interface SeedOptions {
@@ -85,6 +89,7 @@ function defaultState(overrides: SeedOptions = {}): RoomState {
     phase: "results",
     board,
     endsAt: null,
+    startsAt: null,
     players,
     hostId: players[0]?.id ?? null,
     settings: {
@@ -112,6 +117,7 @@ function renderResultsState(state: RoomState, meId: string): void {
   dom.tutorial.hidden = true;
   dom.boardWrap.hidden = true;
   renderResults(state, meId);
+  installResultsPreview(state.board, state.settings.size);
   dom.playAgainBtn.hidden = state.hostId !== meId;
   armPlayAgain();
 }
@@ -119,6 +125,7 @@ function renderResultsState(state: RoomState, meId: string): void {
 function renderPlayingState(state: RoomState, meId: string): void {
   setPhase("playing");
   disarmPlayAgain();
+  uninstallResultsPreview();
   dom.readyBtn.hidden = true;
   dom.startBtn.hidden = true;
   dom.startSlot.hidden = true;
@@ -181,6 +188,7 @@ export function installDevHelpers(): BawgleDev {
     },
     goToLobby() {
       disarmPlayAgain();
+      uninstallResultsPreview();
       setPhase("lobby");
     },
     reload() {

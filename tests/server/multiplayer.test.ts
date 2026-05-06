@@ -425,6 +425,8 @@ describe("multiplayer — state broadcasts after play-again", () => {
       b.client.drain();
 
       host.client.send({ t: "start" });
+      // Skip past the pre-round countdown so `playing` can land.
+      await vi.advanceTimersByTimeAsync(5_100);
       await host.client.nextMatching(
         "state",
         (m) => m.state.phase === "playing",

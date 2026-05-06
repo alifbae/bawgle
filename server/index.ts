@@ -9,6 +9,7 @@ import {
   fetchLatestRoundForRoom,
   fetchRoundById,
   getRoomPhase,
+  getRoomStatus,
 } from "./rooms.ts";
 import { loadDictionary, lookupDefinition } from "./dictionary.ts";
 import { bumpCounter, configureLogging, sweepLogs } from "./metrics.ts";
@@ -133,7 +134,8 @@ app.get("/api/round/:id", (c) => {
   }
   const round = fetchRoundById(id);
   if (!round) return c.json({ status: "not_found" }, 404);
-  return c.json({ status: "ok", round });
+  const roomStatus = getRoomStatus(round.roomCode);
+  return c.json({ status: "ok", round, roomStatus });
 });
 
 app.get("/api/room/:code/round", (c) => {
@@ -142,7 +144,10 @@ app.get("/api/room/:code/round", (c) => {
   if (!code) return c.json({ status: "not_found" }, 404);
 
   const round = fetchLatestRoundForRoom(code);
-  if (round) return c.json({ status: "ok", round });
+  if (round) {
+    const roomStatus = getRoomStatus(round.roomCode);
+    return c.json({ status: "ok", round, roomStatus });
+  }
 
   // No history yet — distinguish "room exists mid-play" from "unknown"
   // so the client can show the right empty state.
@@ -162,6 +167,11 @@ const MIME: Record<string, string> = {
 };
 
 if (existsSync(DIST_DIR)) {
+  // Allowlist of SPA routes. Anything outside this gets a proper 404
+  // status so crawlers don't index arbitrary paths, while still
+  // serving the SPA shell so the client can render its 404 page.
+  const SPA_ROUTES = new Set(["", "/", "/result", "/index.html"]);
+
   app.get("*", async (c) => {
     let p = c.req.path.replace(/^\/+/, "");
     if (!p) p = "index.html";
@@ -173,8 +183,16 @@ if (existsSync(DIST_DIR)) {
         const mime = MIME[extname(filePath)] || "application/octet-stream";
         return new Response(body, { headers: { "content-type": mime } });
       }
+      // SPA fallback: serve index.html for the client router. Return
+      // 200 for known SPA routes, 404 for anything else — the client
+      // still renders its own 404 page in both cases.
+      const normalized = c.req.path.replace(/\/+$/, "") || "/";
+      const knownRoute = SPA_ROUTES.has(normalized);
       const index = readFileSync(join(DIST_DIR, "index.html"));
-      return new Response(index, { headers: { "content-type": "text/html" } });
+      return new Response(index, {
+        status: knownRoute ? 200 : 404,
+        headers: { "content-type": "text/html" },
+      });
     } catch {
       return c.notFound();
     }

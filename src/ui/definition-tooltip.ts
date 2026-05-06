@@ -35,7 +35,7 @@ function hide() {
   activeChip = null;
 }
 
-function positionAbove(chip: HTMLElement) {
+function positionTooltip(chip: HTMLElement) {
   const el = ensureTooltip();
   const r = chip.getBoundingClientRect();
 
@@ -81,7 +81,22 @@ function positionAbove(chip: HTMLElement) {
   const tr2 = el.getBoundingClientRect();
   const spaceAbove = r.top;
   const spaceBelow = window.innerHeight - r.bottom;
-  const placeAbove = spaceAbove >= tr2.height + 12 || spaceAbove > spaceBelow;
+
+  // The results-board preview sits directly above the first row of
+  // chips. If placing the tooltip above would overlap it, we force
+  // below-placement so the user can read the def without covering
+  // the tiles it refers to.
+  const previewBottom = (() => {
+    const preview = document.getElementById("results-board-wrap");
+    if (!preview || preview.hidden) return 0;
+    return preview.getBoundingClientRect().bottom;
+  })();
+  const wouldOverlapPreview =
+    previewBottom > 0 && r.top - tr2.height - 10 < previewBottom + 4;
+
+  const placeAbove =
+    !wouldOverlapPreview &&
+    (spaceAbove >= tr2.height + 12 || spaceAbove > spaceBelow);
   const top = placeAbove ? r.top - tr2.height - 10 : r.bottom + 10;
 
   el.style.left = `${left + window.scrollX}px`;
@@ -137,12 +152,12 @@ async function showFor(chip: HTMLElement) {
   el.innerHTML =
     `<div class="def-word">${escape(word.toUpperCase())}</div>` +
     `<div class="def-loading muted small">…</div>`;
-  positionAbove(chip);
+  positionTooltip(chip);
   try {
     const res = await fetchDefinition(word);
     if (activeChip !== chip) return; // user moved on
     el.innerHTML = render(res);
-    positionAbove(chip);
+    positionTooltip(chip);
   } catch {
     if (activeChip !== chip) return;
     el.innerHTML = `<div class="def-empty muted small">lookup failed</div>`;

@@ -13,21 +13,48 @@ import { createPathStore } from "./game/path.ts";
 import { attachInput } from "./game/input.ts";
 import { armPlayAgain, disarmPlayAgain } from "./ui/play-again.ts";
 import { buildShareText } from "./ui/share-text.ts";
+import {
+  installResultsPreview,
+  uninstallResultsPreview,
+} from "./ui/results-preview.ts";
+import { primeOnFirstGesture, submit as fbSubmit, reject as fbReject } from "./ui/feedback.ts";
+import { initMuteToggle } from "./ui/mute-toggle.ts";
 import type { RoomState, ServerMsg } from "../shared/types.ts";
 
-// Early branch: the shareable results page is a separate route served
-// from the same SPA shell. Load it and bail — we don't want any of the
-// game wiring (WebSocket connect, keyboard input, lobby handlers) on a
-// read-only page.
-if (location.pathname.replace(/\/+$/, "").endsWith("/result")) {
+// Early branch based on the path. The SPA catch-all serves this
+// bundle for any URL, so we dispatch:
+//   /                    → the normal app (lobby → room → results)
+//   /result              → shareable round view
+//   anything else        → 404 page with a link home
+//
+// Trailing slashes and any path segment up to the final `/` are
+// tolerated so reverse proxies mounting us under a prefix still work.
+const routePath = location.pathname.replace(/\/+$/, "");
+const isResultRoute = routePath.endsWith("/result");
+const isRootRoute =
+  routePath === "" ||
+  routePath === "/" ||
+  // index.html at any directory depth counts as the root route.
+  routePath.endsWith("/index.html");
+
+if (isResultRoute) {
   import("./ui/result-page.ts").then(({ initResultPage }) => {
     initThemeSelect(() => {
       /* theme changes don't need to redraw a trail on this page */
     });
+    initMuteToggle();
     void initResultPage();
   });
-} else {
+} else if (isRootRoute) {
   runApp();
+} else {
+  import("./ui/not-found.ts").then(({ initNotFoundPage }) => {
+    initThemeSelect(() => {
+      /* theme changes don't affect the 404 layout */
+    });
+    initMuteToggle();
+    initNotFoundPage();
+  });
 }
 
 function runApp(): void {
@@ -50,6 +77,32 @@ function runApp(): void {
     path.clear();
   }
 
+  /* ---------- Pre-round countdown ---------- */
+
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+  function startCountdown(startsAt: number): void {
+    paintCountdown(startsAt);
+    if (countdownTimer) return;
+    countdownTimer = setInterval(() => paintCountdown(startsAt), 200);
+  }
+
+  function stopCountdown(): void {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+  }
+
+  function paintCountdown(startsAt: number): void {
+    const remainingMs = Math.max(0, startsAt - Date.now());
+    const secs = Math.max(1, Math.ceil(remainingMs / 1000));
+    dom.waitingHost.textContent = `round starting in ${secs}…`;
+    dom.waitingHost.hidden = false;
+    if (remainingMs <= 0) stopCountdown();
+  }
+
+
   function handleServerMessage(msg: ServerMsg): void {
     switch (msg.t) {
       case "joined":
@@ -67,8 +120,10 @@ function runApp(): void {
         break;
       case "word_result":
         if (msg.ok) {
+          fbSubmit();
           flashFeedback(`+${msg.points ?? 0} ✓ ${msg.word.toUpperCase()}`, "ok");
         } else {
+          fbReject();
           flashFeedback(`✗ ${msg.reason ?? "rejected"}`, "bad");
         }
         break;
@@ -108,22 +163,39 @@ function runApp(): void {
       const nonHostConnected = connected.filter((p) => p.id !== state.hostId);
       const allReady =
         nonHostConnected.length === 0 || nonHostConnected.every((p) => p.ready);
+      const countingDown = state.startsAt !== null;
 
+      // During the pre-round countdown, nobody should be able to flip
+      // ready or press start again — lock the controls so the lobby
+      // state doesn't drift between host and peers mid-tick.
       dom.readyBtn.hidden = !me || isHost;
+      dom.readyBtn.disabled = countingDown;
       dom.readyBtn.textContent = meReady ? "not ready" : "i'm ready";
       dom.readyBtn.classList.toggle("is-ready", meReady);
 
       dom.startBtn.hidden = !isHost;
-      dom.startBtn.disabled = !allReady;
-      dom.startBtn.textContent = allReady ? "start round" : "waiting for players";
-      dom.startBtn.classList.toggle("ready", allReady);
+      dom.startBtn.disabled = !allReady || countingDown;
+      dom.startBtn.textContent = countingDown
+        ? "starting…"
+        : allReady
+        ? "start round"
+        : "waiting for players";
+      dom.startBtn.classList.toggle("ready", allReady && !countingDown);
       dom.startBtn.title = allReady ? "" : "all players must be ready";
 
       dom.startSlot.hidden = false;
-      dom.waitingHost.hidden = isHost || meReady || !allReady;
+      dom.waitingHost.hidden = countingDown
+        ? false
+        : isHost || meReady || !allReady;
       dom.waitingHost.textContent = allReady
         ? "waiting for host to start the round"
         : "ready up to start the round";
+
+      if (countingDown) {
+        startCountdown(state.startsAt!);
+      } else {
+        stopCountdown();
+      }
 
       dom.timer.hidden = true;
       dom.wordBar.hidden = true;
@@ -135,6 +207,7 @@ function runApp(): void {
       path.clear();
     } else if (state.phase === "playing") {
       setPhase("playing");
+      stopCountdown();
       dom.readyBtn.hidden = true;
       dom.startBtn.hidden = true;
       dom.startSlot.hidden = true;
@@ -151,6 +224,7 @@ function runApp(): void {
     } else if (state.phase === "results") {
       setPhase("results");
       stopTicker();
+      stopCountdown();
       resetTimer();
       renderResults(state, meId);
       dom.readyBtn.hidden = true;
@@ -163,8 +237,10 @@ function runApp(): void {
       dom.yourWordsRow.hidden = true;
       dom.myWords.hidden = true;
       dom.tutorial.hidden = true;
-      dom.boardWrap.hidden = true;
       path.clear();
+      // Board preview: show the final grid read-only and wire up
+      // chip-hover-to-trace so players can see how words were formed.
+      installResultsPreview(state.board, state.settings?.size ?? 4);
       // Share-link button: show only once the server has assigned a
       // round id for this results payload. The id is stable across
       // play-again transitions, so recipients can bookmark it.
@@ -178,7 +254,11 @@ function runApp(): void {
     } else {
       // Left the results phase — make sure the lockout timer can't tick
       // against a hidden button.
-      if (prevPhase === "results") disarmPlayAgain();
+      if (prevPhase === "results") {
+        disarmPlayAgain();
+        uninstallResultsPreview();
+      }
+      stopCountdown();
     }
 
     dom.playAgainBtn.hidden = !isHost;
@@ -272,6 +352,8 @@ function runApp(): void {
 
   initThemeSelect(() => requestAnimationFrame(() => drawTrail(path.get())));
 
+  initMuteToggle();
+
   initLobby({
     onSubmit: ({ code, name }) => {
       if (hasSocket()) return;
@@ -306,4 +388,9 @@ function runApp(): void {
   if (__BAWGLE_ENVIRONMENT__ === "development") {
     import("./dev-helpers.ts").then(({ installDevHelpers }) => installDevHelpers());
   }
+
+  // Prime the audio context on first user gesture so the very first
+  // click/keypress after page load fires its synth sample without the
+  // iOS "first audio is silent" quirk.
+  primeOnFirstGesture();
 }

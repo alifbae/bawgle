@@ -67,16 +67,30 @@ main {
   color: var(--c-bad);
   border-color: var(--c-bad);
   background: color-mix(in srgb, var(--c-bad) 15%, var(--c-panel));
-  animation: timer-pulse 1s ease-in-out infinite;
+  animation: timer-pulse 900ms ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, background, box-shadow;
 }
 
 @keyframes timer-pulse {
   0%,
   100% {
-    opacity: 1;
+    transform: scale(1);
+    background: color-mix(in srgb, var(--c-bad) 15%, var(--c-panel));
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-bad) 40%, transparent);
   }
   50% {
-    opacity: 0.72;
+    transform: scale(1.06);
+    background: color-mix(in srgb, var(--c-bad) 28%, var(--c-panel));
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--c-bad) 0%, transparent);
+  }
+}
+
+/* Respect reduced-motion users — keep the red styling but drop the
+   animation. */
+@media (prefers-reduced-motion: reduce) {
+  .timer.low {
+    animation: none;
   }
 }
 
@@ -100,6 +114,53 @@ main {
 .theme-btn:hover {
   color: var(--c-fg);
   border-color: var(--c-fg);
+}
+
+/* Mute toggle — same visual language as theme-btn but icon-only, with
+   an explicit red state when audio is muted so users always know
+   whether sound will play. Icons swap via the is-muted class below. */
+.mute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--c-muted);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.mute-btn:hover {
+  color: var(--c-fg);
+  border-color: var(--c-fg);
+}
+
+.mute-btn .mute-icon-off {
+  display: none;
+}
+
+.mute-btn.is-muted {
+  color: var(--c-bad);
+  border-color: color-mix(in srgb, var(--c-bad) 60%, var(--c-border));
+  background: color-mix(in srgb, var(--c-bad) 10%, transparent);
+}
+
+.mute-btn.is-muted:hover {
+  color: var(--c-bad);
+  border-color: var(--c-bad);
+}
+
+.mute-btn.is-muted .mute-icon-on {
+  display: none;
+}
+
+.mute-btn.is-muted .mute-icon-off {
+  display: block;
 }
 
 .theme-swatch {

@@ -21,8 +21,14 @@ export const adminEnabled = ADMIN_PASS.length > 0;
 // Throttle: after MAX_FAILS failures in the window, that IP is locked
 // out for COOLDOWN_MS. Sliding-window is overkill for this; we just
 // reset the counter when the oldest hit ages out.
-const MAX_FAILS = 5;
-const WINDOW_MS = 60_000;
+//
+// We only count requests that actually *tried* credentials. A request
+// with no Authorization header is just "not logged in yet" and doesn't
+// advance the counter — otherwise the dashboard's 3s polling
+// interval could self-lock a legitimate user during a brief stale-
+// credential window.
+const MAX_FAILS = 10;
+const WINDOW_MS = 3 * 60_000;
 const COOLDOWN_MS = 5 * 60_000;
 
 interface FailState {
@@ -126,7 +132,12 @@ export function requireAdmin(c: Context): Response | null {
     });
   }
   if (!isAuthed(c)) {
-    recordFail(ip);
+    // Only count attempts that actually supplied credentials. A bare
+    // `401` probe (no Authorization header) is the dashboard asking
+    // the browser for creds, not a password guess — counting it would
+    // self-lock legitimate users during the 3s polling cycle.
+    const hasAuthHeader = (c.req.header("authorization") || "").length > 0;
+    if (hasAuthHeader) recordFail(ip);
     return new Response("Unauthorized", {
       status: 401,
       headers: { "WWW-Authenticate": 'Basic realm="bawgle admin"' },

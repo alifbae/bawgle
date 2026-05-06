@@ -3,26 +3,44 @@ import { neighbors, setBoardSize } from "../game/path.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-export function renderBoard(board: string[] | null | undefined, size = 4): void {
+/**
+ * Targets for rendering a board. Defaults to the live playing board
+ * but accepts a distinct element pair so the results preview can show
+ * its own copy without clobbering the primary board's DOM.
+ */
+export interface BoardTargets {
+  board: HTMLElement;
+  trail: SVGElement;
+}
+
+function defaultTargets(): BoardTargets {
+  return { board: dom.board, trail: dom.boardTrail };
+}
+
+export function renderBoard(
+  board: string[] | null | undefined,
+  size = 4,
+  targets: BoardTargets = defaultTargets(),
+): void {
   setBoardSize(size);
-  dom.board.style.setProperty("--board-size", String(size));
+  targets.board.style.setProperty("--board-size", String(size));
 
   // Keep the SVG trail element; remove only dice
-  for (const el of [...dom.board.children]) {
-    if (el !== dom.boardTrail) el.remove();
+  for (const el of [...targets.board.children]) {
+    if (el !== targets.trail) el.remove();
   }
   const total = size * size;
   if (!board) {
     for (let i = 0; i < total; i++) {
-      dom.board.appendChild(makeCap("·", i, true));
+      targets.board.appendChild(makeCap("·", i, true));
     }
-    clearTrail();
+    clearTrail(targets);
     return;
   }
   for (let i = 0; i < board.length; i++) {
     const face = board[i];
     const label = face === "Qu" ? "Qu" : face.toUpperCase();
-    dom.board.appendChild(makeCap(label, i, false));
+    targets.board.appendChild(makeCap(label, i, false));
   }
 }
 
@@ -53,7 +71,10 @@ function makeCap(
   return btn;
 }
 
-export function applyPathUI(pathIndices: number[]): void {
+export function applyPathUI(
+  pathIndices: number[],
+  targets: BoardTargets = defaultTargets(),
+): void {
   const selSet = new Set(pathIndices);
   const last = pathIndices[pathIndices.length - 1];
   const adjSet =
@@ -61,7 +82,7 @@ export function applyPathUI(pathIndices: number[]): void {
       ? new Set(neighbors(last).filter((i) => !selSet.has(i)))
       : new Set<number>();
 
-  for (const el of dom.board.querySelectorAll<HTMLElement>(".die")) {
+  for (const el of targets.board.querySelectorAll<HTMLElement>(".die")) {
     const i = Number(el.dataset.index);
     el.classList.toggle("selected", selSet.has(i));
     el.classList.toggle("last", i === last);
@@ -81,31 +102,39 @@ export function pulsePress(index: number): void {
 
 /* ---------- SVG trail ---------- */
 
-function capCenter(index: number): { x: number; y: number } | null {
-  const el = dom.board.querySelector<HTMLElement>(`.die[data-index="${index}"]`);
+function capCenter(
+  index: number,
+  targets: BoardTargets,
+): { x: number; y: number } | null {
+  const el = targets.board.querySelector<HTMLElement>(
+    `.die[data-index="${index}"]`,
+  );
   if (!el) return null;
   const rect = el.getBoundingClientRect();
-  const boardRect = dom.board.getBoundingClientRect();
+  const boardRect = targets.board.getBoundingClientRect();
   return {
     x: rect.left - boardRect.left + rect.width / 2,
     y: rect.top - boardRect.top + rect.height / 2,
   };
 }
 
-export function clearTrail(): void {
-  dom.boardTrail.innerHTML = "";
+export function clearTrail(targets: BoardTargets = defaultTargets()): void {
+  targets.trail.innerHTML = "";
 }
 
-export function drawTrail(pathIndices: number[]): void {
-  clearTrail();
+export function drawTrail(
+  pathIndices: number[],
+  targets: BoardTargets = defaultTargets(),
+): void {
+  clearTrail(targets);
   if (pathIndices.length < 2) return;
 
-  const rect = dom.board.getBoundingClientRect();
-  dom.boardTrail.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
-  dom.boardTrail.setAttribute("preserveAspectRatio", "none");
+  const rect = targets.board.getBoundingClientRect();
+  targets.trail.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+  targets.trail.setAttribute("preserveAspectRatio", "none");
 
   const points = pathIndices
-    .map(capCenter)
+    .map((i) => capCenter(i, targets))
     .filter((p): p is { x: number; y: number } => p !== null);
   if (points.length < 2) return;
 
@@ -115,7 +144,7 @@ export function drawTrail(pathIndices: number[]): void {
   const path = document.createElementNS(SVG_NS, "path");
   path.setAttribute("class", "trail-line");
   path.setAttribute("d", d);
-  dom.boardTrail.appendChild(path);
+  targets.trail.appendChild(path);
 }
 
 export function updateCurrentWord(text: string): void {

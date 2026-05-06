@@ -187,7 +187,7 @@ describe("rooms", () => {
       const host = mod.rooms.joinRoom(ws as never, "RDY1", "host", "c1");
       if (host.playerId === null) throw new Error();
 
-      mod.rooms.startRound(host.room, host.playerId);
+      mod.rooms.startRound(host.room, host.playerId); mod.rooms.__beginRoundForTests(host.room);
       expect(host.room.state.phase).toBe("playing");
       mod.rooms.setReady(host.room, host.playerId, true);
       // No change — still playing, ready untouched.
@@ -200,12 +200,12 @@ describe("rooms", () => {
       if (host.playerId === null || guest.playerId === null) throw new Error();
 
       // Guest not ready — start is a no-op.
-      mod.rooms.startRound(host.room, host.playerId);
+      mod.rooms.startRound(host.room, host.playerId); mod.rooms.__beginRoundForTests(host.room);
       expect(host.room.state.phase).toBe("lobby");
 
       // Ready up, try again.
       mod.rooms.setReady(host.room, guest.playerId, true);
-      mod.rooms.startRound(host.room, host.playerId);
+      mod.rooms.startRound(host.room, host.playerId); mod.rooms.__beginRoundForTests(host.room);
       expect(host.room.state.phase).toBe("playing");
       expect(host.room.state.board).not.toBeNull();
       expect(host.room.state.endsAt).not.toBeNull();
@@ -233,7 +233,7 @@ describe("rooms", () => {
     it("rejects too-short words and non-letter input", () => {
       const host = mod.rooms.joinRoom(new FakeSocket() as never, "W2", "host", "c1");
       if (host.playerId === null) throw new Error();
-      mod.rooms.startRound(host.room, host.playerId);
+      mod.rooms.startRound(host.room, host.playerId); mod.rooms.__beginRoundForTests(host.room);
 
       expect(mod.rooms.submitWord(host.room, host.playerId, "ab").ok).toBe(false);
       expect(mod.rooms.submitWord(host.room, host.playerId, "cat1").ok).toBe(false);
@@ -243,7 +243,7 @@ describe("rooms", () => {
       // Pin a known board so we can test a specific word.
       const host = mod.rooms.joinRoom(new FakeSocket() as never, "W3", "host", "c1");
       if (host.playerId === null) throw new Error();
-      mod.rooms.startRound(host.room, host.playerId);
+      mod.rooms.startRound(host.room, host.playerId); mod.rooms.__beginRoundForTests(host.room);
 
       // Seed the player's word list as if they already scored "catsup".
       const p = host.room.state.players[0];
@@ -278,7 +278,7 @@ describe("rooms", () => {
     it("rejects changes during a round", () => {
       const host = mod.rooms.joinRoom(new FakeSocket() as never, "SET3", "host", "c1");
       if (host.playerId === null) throw new Error();
-      mod.rooms.startRound(host.room, host.playerId);
+      mod.rooms.startRound(host.room, host.playerId); mod.rooms.__beginRoundForTests(host.room);
       mod.rooms.updateSettings(host.room, host.playerId, { size: 5 });
       expect(host.room.state.settings.size).toBe(4);
     });
@@ -301,7 +301,7 @@ describe("rooms", () => {
       mod.rooms.joinRoom(new FakeSocket() as never, "A", "alfa", "c1");
       const b = mod.rooms.joinRoom(new FakeSocket() as never, "B", "beta", "c2");
       if (b.playerId === null) throw new Error();
-      mod.rooms.startRound(b.room, b.playerId);
+      mod.rooms.startRound(b.room, b.playerId); mod.rooms.__beginRoundForTests(b.room);
       const summary = mod.rooms.roomsSummary();
       expect(summary.total).toBe(2);
       expect(summary.playing).toBe(1);
@@ -312,7 +312,7 @@ describe("rooms", () => {
       const a = mod.rooms.joinRoom(new FakeSocket() as never, "AAAA", "alfa", "c1");
       const b = mod.rooms.joinRoom(new FakeSocket() as never, "BBBB", "beta", "c2");
       if (b.playerId === null) throw new Error();
-      mod.rooms.startRound(b.room, b.playerId);
+      mod.rooms.startRound(b.room, b.playerId); mod.rooms.__beginRoundForTests(b.room);
       const snap = mod.rooms.roomsSnapshot();
       expect(snap[0].phase).toBe("playing");
       expect(snap[0].code).toBe("BBBB");

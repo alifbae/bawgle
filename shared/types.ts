@@ -47,7 +47,14 @@ export interface RoomState {
   code: string;
   phase: RoundPhase;
   board: Board | null;
-  endsAt: number | null; // epoch ms
+  endsAt: number | null; // epoch ms — round end
+  /**
+   * Epoch ms when the round will transition from lobby to playing.
+   * Non-null only during the brief pre-round countdown (~5s) kicked
+   * off by the host clicking "start." Clients render a countdown
+   * based on this, the server actually flips the phase.
+   */
+  startsAt: number | null;
   players: Player[];
   hostId: string | null;
   settings: RoomSettings;

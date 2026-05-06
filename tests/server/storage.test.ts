@@ -22,6 +22,7 @@ function makeState(code: string, overrides: Partial<RoomState> = {}): RoomState 
     phase: "lobby",
     board: null,
     endsAt: null,
+    startsAt: null,
     players: [],
     hostId: null,
     settings: { ...DEFAULT_SETTINGS },

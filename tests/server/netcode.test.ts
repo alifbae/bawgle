@@ -258,9 +258,11 @@ describe("netcode — heartbeat", () => {
 });
 
 describe("netcode — word play over the wire", () => {
-  it("reports word_result for a well-formed word submission", async () => {
-    const srv = await freshServer();
-    try {
+  it(
+    "reports word_result for a well-formed word submission",
+    async () => {
+      const srv = await freshServer();
+      try {
       const ws = new WebSocket(srv.url);
       await waitForOpen(ws);
 
@@ -268,16 +270,24 @@ describe("netcode — word play over the wire", () => {
       const joined = await waitForMessage<{ t: string }>(ws);
       expect(joined.t).toBe("joined");
 
-      // Start a round — single-player host can always start (no other
-      // players gating ready).
+      // Start a round. The host first enters a 5s countdown (board
+      // stays null) before the round actually begins and the board
+      // gets rolled. Keep reading state frames until we see a non-null
+      // board, which signals the round is live.
       ws.send(JSON.stringify({ t: "start" }));
-      // First post-start frame is a state update describing the board.
-      const next = await waitForMessage<{
-        t: string;
-        state?: { board: string[] | null };
-      }>(ws);
-      expect(next.t).toBe("state");
-      expect(next.state?.board).not.toBeNull();
+      const deadline = Date.now() + 8_000;
+      let gotBoard = false;
+      while (Date.now() < deadline) {
+        const next = await waitForMessage<{
+          t: string;
+          state?: { board: string[] | null };
+        }>(ws);
+        if (next.t === "state" && next.state?.board) {
+          gotBoard = true;
+          break;
+        }
+      }
+      expect(gotBoard).toBe(true);
 
       // Submit a too-short word; we should get a rejection frame.
       ws.send(JSON.stringify({ t: "word", word: "ab" }));
@@ -289,5 +299,7 @@ describe("netcode — word play over the wire", () => {
     } finally {
       await srv.close();
     }
-  });
+  },
+    10_000,
+  );
 });
