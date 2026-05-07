@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { setBoardSize } from "../../../src/game/path.ts";
+import { setBoardSize } from "../../../src/lib/stores/adjacency.ts";
 import { findPathForWord } from "../../../src/game/resolver.ts";
 
 describe("findPathForWord", () => {

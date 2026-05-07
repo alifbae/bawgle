@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPathStore, isAdjacent, neighbors, setBoardSize } from "../../../src/game/path.ts";
+import {
+  getBoardSize,
+  isAdjacent,
+  neighbors,
+  setBoardSize,
+} from "../../../src/lib/stores/adjacency.ts";
+import { createPathStore } from "../../../src/lib/stores/path.ts";
 
 describe("isAdjacent / neighbors", () => {
   beforeEach(() => setBoardSize(4));
@@ -9,15 +15,9 @@ describe("isAdjacent / neighbors", () => {
   });
 
   it("treats orthogonal and diagonal cells as adjacent (8-way)", () => {
-    // Center of 4x4 is index 5 (row 1, col 1).
-    //  0  1  2  3
-    //  4 (5) 6  7
-    //  8  9 10 11
-    // 12 13 14 15
     for (const n of [0, 1, 2, 4, 6, 8, 9, 10]) {
       expect(isAdjacent(5, n)).toBe(true);
     }
-    // Non-adjacent:
     for (const n of [3, 7, 11, 12, 13, 14, 15]) {
       expect(isAdjacent(5, n)).toBe(false);
     }
@@ -34,6 +34,7 @@ describe("isAdjacent / neighbors", () => {
   it("respects the configured board size", () => {
     const byNum = (a: number, b: number) => a - b;
     setBoardSize(5);
+    expect(getBoardSize()).toBe(5);
     // Center of 5x5 is index 12.
     expect(neighbors(12).sort(byNum)).toEqual([6, 7, 8, 11, 13, 16, 17, 18]);
     setBoardSize(4);
@@ -88,26 +89,31 @@ describe("createPathStore", () => {
     expect(s.get()).toEqual([]);
   });
 
-  it("calls onChange only when the path actually changes", () => {
-    const onChange = vi.fn();
-    const s = createPathStore(onChange);
+  it("notifies subscribers only when the path changes", () => {
+    const s = createPathStore();
+    const sub = vi.fn();
+    // Svelte stores fire once immediately with the current value.
+    const unsub = s.subscribe(sub);
+    expect(sub).toHaveBeenCalledTimes(1);
 
     s.push(0);
-    expect(onChange).toHaveBeenCalledTimes(1);
-    s.push(0); // dupe → rejected, no change
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(sub).toHaveBeenCalledTimes(2);
+    s.push(0); // dupe → rejected, no notify
+    expect(sub).toHaveBeenCalledTimes(2);
     s.push(1);
-    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(sub).toHaveBeenCalledTimes(3);
 
-    s.set([0, 1]); // same contents, no change
-    expect(onChange).toHaveBeenCalledTimes(2);
+    s.set([0, 1]); // same contents, no notify
+    expect(sub).toHaveBeenCalledTimes(3);
     s.set([0]); // different
-    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(sub).toHaveBeenCalledTimes(4);
 
     s.clear();
-    expect(onChange).toHaveBeenCalledTimes(4);
-    s.clear(); // already empty, no change
-    expect(onChange).toHaveBeenCalledTimes(4);
+    expect(sub).toHaveBeenCalledTimes(5);
+    s.clear(); // already empty, no notify
+    expect(sub).toHaveBeenCalledTimes(5);
+
+    unsub();
   });
 
   it("wordText joins the selected cells into a lowercase string", () => {
@@ -116,22 +122,10 @@ describe("createPathStore", () => {
     s.push(1);
     s.push(5);
     const board = [
-      "C",
-      "A",
-      "T",
-      "S",
-      "H",
-      "E",
-      "R",
-      "U",
-      "P",
-      "O",
-      "L",
-      "I",
-      "D",
-      "N",
-      "E",
-      "G",
+      "C", "A", "T", "S",
+      "H", "E", "R", "U",
+      "P", "O", "L", "I",
+      "D", "N", "E", "G",
     ];
     expect(s.wordText(board)).toBe("cae");
     expect(s.wordText(null)).toBe("");

@@ -5,22 +5,13 @@
  * bundle tree-shakes this module out of production builds (see
  * `__BAWGLE_ENVIRONMENT__` in vite.config.js).
  *
- * Intended purely for fast UI iteration: "what does the results screen
- * look like when there are three players with a mix of words?" Open the
- * browser console and call e.g. `bawgleDev.goToResults()` to jump
- * straight there without running a full round.
+ * Under the Svelte rewrite, these helpers work by pushing synthetic
+ * snapshots into the room store so the component tree renders them —
+ * no DOM poking required. Perfect for "what does the results screen
+ * look like with three players?" iteration loops.
  */
 
-import { dom } from "./dom.ts";
-import { setPhase } from "./ui/phase.ts";
-import { renderPlayers } from "./ui/players.ts";
-import { renderResults, renderMyWords } from "./ui/words.ts";
-import { renderBoard } from "./ui/board.ts";
-import { armPlayAgain, disarmPlayAgain } from "./ui/play-again.ts";
-import {
-  installResultsPreview,
-  uninstallResultsPreview,
-} from "./ui/results-preview.ts";
+import { room } from "./lib/stores/room.ts";
 import type { Player, RoomState } from "../shared/types.ts";
 
 interface SeedOptions {
@@ -47,7 +38,6 @@ const DEFAULT_BOARD_4X4 = [
   "M", "N", "O", "P",
 ];
 
-/** A handful of realistic words reachable on DEFAULT_BOARD_4X4. */
 const DEFAULT_POSSIBLE_4X4 = [
   "ace", "act", "age", "ago", "arc", "are", "art", "ate", "cat",
   "cos", "cue", "cur", "cut", "dog", "doh", "eat", "ego", "era",
@@ -65,6 +55,7 @@ function makePlayer(
   words: string[],
   opts: { connected?: boolean; ready?: boolean; host?: boolean } = {},
 ): Player {
+  void opts.host; // host is tracked via room.hostId, not the player row
   return {
     id,
     clientId: `dev-${id}`,
@@ -76,7 +67,6 @@ function makePlayer(
   };
 }
 
-/** Build a reasonable default results-screen state. */
 function defaultState(overrides: SeedOptions = {}): RoomState {
   const players = overrides.players ?? [
     makePlayer("me", "ALFA", ["cat", "cats", "are", "arts", "cure", "caters", "charge"], { host: true }),
@@ -102,68 +92,11 @@ function defaultState(overrides: SeedOptions = {}): RoomState {
   };
 }
 
-/** Reach into the same DOM switches main.ts uses for the results phase. */
-function renderResultsState(state: RoomState, meId: string): void {
-  setPhase("results");
-  dom.readyBtn.hidden = true;
-  dom.startBtn.hidden = true;
-  dom.startSlot.hidden = true;
-  dom.waitingHost.hidden = true;
-  dom.timer.hidden = true;
-  dom.wordBar.hidden = true;
-  dom.possibleWords.hidden = true;
-  dom.yourWordsRow.hidden = true;
-  dom.myWords.hidden = true;
-  dom.tutorial.hidden = true;
-  dom.boardWrap.hidden = true;
-  renderResults(state, meId);
-  installResultsPreview(state.board, state.settings.size);
-  dom.playAgainBtn.hidden = state.hostId !== meId;
-  armPlayAgain();
-}
-
-function renderPlayingState(state: RoomState, meId: string): void {
-  setPhase("playing");
-  disarmPlayAgain();
-  uninstallResultsPreview();
-  dom.readyBtn.hidden = true;
-  dom.startBtn.hidden = true;
-  dom.startSlot.hidden = true;
-  dom.waitingHost.hidden = true;
-  dom.timer.hidden = false;
-  dom.timer.textContent = formatRemaining(state.endsAt);
-  dom.wordBar.hidden = false;
-  dom.possibleWords.hidden = false;
-  dom.yourWordsRow.hidden = false;
-  dom.myWords.hidden = false;
-  dom.tutorial.hidden = true;
-  dom.boardWrap.hidden = false;
-  dom.pwCount.textContent = String(state.possibleCount);
-  renderBoard(state.board ?? [], state.settings.size);
-  renderPlayers(state, meId);
-  renderMyWords(state, meId);
-  dom.roomCodeDisplay.textContent = state.code;
-}
-
-function formatRemaining(endsAt: number | null): string {
-  if (!endsAt) return "03:00";
-  const ms = Math.max(0, endsAt - Date.now());
-  const total = Math.round(ms / 1000);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
 export interface BawgleDev {
-  /** Jump straight to a populated results screen. Returns the state used. */
   goToResults(options?: SeedOptions): RoomState;
-  /** Jump to a playing state with a live-looking word list. */
   goToPlaying(options?: SeedOptions): RoomState;
-  /** Reset the UI back to the lobby. */
   goToLobby(): void;
-  /** Swap out of dev mode by reloading the page clean. */
   reload(): void;
-  /** Quick access to the shapes used under the hood, if you want to tweak. */
   makePlayer: typeof makePlayer;
   defaultState: typeof defaultState;
 }
@@ -173,7 +106,7 @@ export function installDevHelpers(): BawgleDev {
     goToResults(options = {}) {
       const state = { ...defaultState(options), phase: "results" as const };
       const meId = options.meId ?? state.players[0]?.id ?? "me";
-      renderResultsState(state, meId);
+      room.apply({ meId, state });
       return state;
     },
     goToPlaying(options = {}) {
@@ -183,13 +116,11 @@ export function installDevHelpers(): BawgleDev {
         endsAt: Date.now() + (options.roundSeconds ?? 180) * 1000,
       };
       const meId = options.meId ?? state.players[0]?.id ?? "me";
-      renderPlayingState(state, meId);
+      room.apply({ meId, state });
       return state;
     },
     goToLobby() {
-      disarmPlayAgain();
-      uninstallResultsPreview();
-      setPhase("lobby");
+      room.reset();
     },
     reload() {
       const url = new URL(location.href);
@@ -211,12 +142,9 @@ export function installDevHelpers(): BawgleDev {
 }
 
 /**
- * Fixed-position dev toolbar. Injects its own styles so it doesn't bleed
- * into the app CSS. Collapses to a tiny badge on click so it can't obscure
- * the UI during testing.
+ * Fixed-position dev toolbar.
  */
 function renderToolbar(api: BawgleDev): void {
-  // Avoid double-mount on HMR.
   document.getElementById("bawgle-dev-toolbar")?.remove();
 
   const style = document.createElement("style");

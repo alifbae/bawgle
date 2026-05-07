@@ -1,20 +1,19 @@
-import { flashFeedback } from "./ui/phase.ts";
-import { getClientId } from "./util/client-id.ts";
-import type { ClientMsg, ServerMsg } from "../shared/types.ts";
+// WebSocket client. Exponential-backoff reconnect. Routes incoming
+// messages into the room + feedback stores and calls back to the
+// caller for word-result audio/haptics.
 
-// Reconnect tuning: exponential backoff so a flaky connection doesn't
-// hammer the server, but fast enough that a transient drop (tab sleep,
-// nat rebind) recovers without the player noticing. Resets to 0 on a
-// successful open.
+import { getClientId, setClientId } from "../util/client-id.ts";
+import { room } from "./stores/room.ts";
+import { flashFeedback } from "./stores/feedback.ts";
+import { submit as fbSubmit, reject as fbReject } from "../ui/feedback.ts";
+import type { ClientMsg, ServerMsg } from "../../shared/types.ts";
+
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 15000];
 
 let ws: WebSocket | null = null;
-let onMessage: ((msg: ServerMsg) => void) | null = null;
 let joinPayload: { code: string; name: string } | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
-// Distinguishes "user left on purpose" (don't reconnect) from "socket
-// dropped" (reconnect).
 let intentionalClose = false;
 
 function wsUrl(): string {
@@ -33,23 +32,46 @@ function clearReconnect(): void {
 function scheduleReconnect(): void {
   if (intentionalClose || !joinPayload) return;
   clearReconnect();
-  const delay = RECONNECT_DELAYS_MS[Math.min(reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)]!;
+  const delay =
+    RECONNECT_DELAYS_MS[Math.min(reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)]!;
   reconnectAttempt += 1;
   reconnectTimer = setTimeout(openSocket, delay);
 }
 
+function handleServerMessage(msg: ServerMsg): void {
+  switch (msg.t) {
+    case "joined":
+      if (msg.state?.code) {
+        setClientId(msg.state.code, msg.clientId);
+      }
+      room.apply({ meId: msg.you, state: msg.state });
+      break;
+    case "state":
+      room.apply({ state: msg.state });
+      break;
+    case "word_result":
+      if (msg.ok) {
+        fbSubmit();
+        flashFeedback(`+${msg.points ?? 0} ✓ ${msg.word.toUpperCase()}`, "ok");
+      } else {
+        fbReject();
+        flashFeedback(`✗ ${msg.reason ?? "rejected"}`, "bad");
+      }
+      break;
+    case "error":
+      flashFeedback(msg.message, "bad");
+      break;
+  }
+}
+
 function openSocket(): void {
-  if (!joinPayload || !onMessage) return;
+  if (!joinPayload) return;
   const { code, name } = joinPayload;
 
   ws = new WebSocket(wsUrl());
 
   ws.addEventListener("open", () => {
     reconnectAttempt = 0;
-    if (reconnectTimer === null) {
-      // Only show a reconnected toast on follow-up connects, not the
-      // initial join — otherwise every page load flashes "reconnected".
-    }
     send({ t: "join", code, name, clientId: getClientId(code) });
   });
 
@@ -60,7 +82,7 @@ function openSocket(): void {
     } catch {
       return;
     }
-    onMessage?.(msg);
+    handleServerMessage(msg);
   });
 
   ws.addEventListener("close", () => {
@@ -70,27 +92,17 @@ function openSocket(): void {
       return;
     }
     if (reconnectAttempt === 0) {
-      // First drop after a live connection. Tell the user we're trying.
       flashFeedback("Connection lost — reconnecting", "bad");
     }
     scheduleReconnect();
   });
 
-  // Error events always precede close; reporting both floods the
-  // feedback line, so we ignore error and let close handle the UI.
   ws.addEventListener("error", () => {
-    /* swallow; close handler takes over */
+    /* error always precedes close; close handles UX */
   });
 }
 
-export function connectAndJoin(
-  { code, name }: { code: string; name: string },
-  handler: (msg: ServerMsg) => void,
-): void {
-  // Calling this while a live socket exists is a no-op; the caller
-  // flow ensures `hasSocket()` is checked first. Reset reconnect
-  // state for a fresh join.
-  onMessage = handler;
+export function connectAndJoin({ code, name }: { code: string; name: string }): void {
   joinPayload = { code, name };
   intentionalClose = false;
   reconnectAttempt = 0;
@@ -102,23 +114,19 @@ export function isConnected(): boolean {
   return !!ws && ws.readyState === WebSocket.OPEN;
 }
 
+export function hasSocket(): boolean {
+  return !!ws || !!joinPayload;
+}
+
 export function send(msg: ClientMsg): void {
   if (!isConnected() || !ws) return;
   try {
     ws.send(JSON.stringify(msg));
   } catch {
-    // Half-open socket. Close handler will reconnect.
+    /* half-open socket; close handler will reconnect */
   }
 }
 
-export function hasSocket(): boolean {
-  return !!ws || !!joinPayload;
-}
-
-/**
- * Cleanly shut down the connection and prevent auto-reconnect. Call
- * this when the user explicitly leaves the room.
- */
 export function disconnect(): void {
   intentionalClose = true;
   joinPayload = null;

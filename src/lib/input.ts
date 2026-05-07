@@ -1,57 +1,72 @@
-import { dom } from "../dom.ts";
-import { isAdjacent, neighbors, type PathStore } from "./path.ts";
-import { findCapUnderPoint, findCapNearPoint, pulsePress } from "../ui/board.ts";
-import { flashFeedback } from "../ui/phase.ts";
+// Pointer + keyboard input wiring. Identical semantics to the old
+// attachInput(), but now it targets a Svelte Board component's root
+// element and a PathStore — rather than the legacy `dom.*` globals.
+//
+// Pointer gestures manipulate the path directly (sliding, tapping).
+// Keyboard typing builds a typed-word buffer and uses the resolver to
+// find a matching path with full lookahead.
+
+import { findPathForWord } from "../game/resolver.ts";
+import { isAdjacent, neighbors } from "./stores/adjacency.ts";
 import { tap } from "../ui/feedback.ts";
-import { findPathForWord } from "./resolver.ts";
+import type { PathStore } from "./stores/path.ts";
+import { flashFeedback } from "./stores/feedback.ts";
 
 export interface AttachInputOptions {
+  boardEl: HTMLElement;
+  wordBarEl?: HTMLElement | null;
   path: PathStore;
   onSubmit: () => void;
   getBoard: () => string[] | null | undefined;
   getPhase: () => string | undefined;
+  /** Called after a tile lands from a gesture — parent bumps a token
+   *  so the Board component animates the press. */
+  onPress?: (index: number) => void;
+  /** Hit-testers supplied by the Board component. */
+  findCapUnderPoint: (x: number, y: number) => number;
+  findCapNearPoint: (x: number, y: number, tolerance?: number) => number;
 }
 
-/**
- * Wires pointer (touch/mouse) and keyboard input to a path store.
- *
- * Pointer gestures manipulate the path directly (sliding/tapping tiles).
- * Keyboard typing builds a typed-word buffer and uses the resolver to find a
- * matching path on the board with full lookahead.
- */
-export function attachInput({
-  path,
-  onSubmit,
-  getBoard,
-  getPhase,
-}: AttachInputOptions): void {
+export function attachInput(opts: AttachInputOptions): () => void {
+  const {
+    boardEl,
+    wordBarEl,
+    path,
+    onSubmit,
+    getBoard,
+    getPhase,
+    onPress,
+    findCapUnderPoint,
+    findCapNearPoint,
+  } = opts;
+
   let pointerActive = false;
-  let _pointerStartIdx = -1;
   let pointerLastIdx = -1;
   let pointerMoved = false;
   let tappedOnEnd = false;
 
-  // Typed-word buffer from keystrokes. Cleared whenever the user drags/taps.
   let typed = "";
 
-  const board = dom.board;
+  function pressTile(idx: number): void {
+    onPress?.(idx);
+    tap();
+  }
 
   /* ---------- Pointer ---------- */
 
-  board.addEventListener("pointerdown", (e: PointerEvent) => {
+  const onBoardPointerDown = (e: PointerEvent) => {
     if (getPhase() !== "playing") return;
     const idx = findCapUnderPoint(e.clientX, e.clientY);
     if (idx === -1) return;
     e.preventDefault();
     pointerActive = true;
     pointerMoved = false;
-    _pointerStartIdx = idx;
     pointerLastIdx = idx;
     typed = "";
     try {
-      board.setPointerCapture(e.pointerId);
+      boardEl.setPointerCapture(e.pointerId);
     } catch {
-      // ignore
+      /* ignore */
     }
 
     const last = path.last();
@@ -79,9 +94,9 @@ export function attachInput({
     path.clear();
     path.push(idx);
     pressTile(idx);
-  });
+  };
 
-  board.addEventListener("pointermove", (e: PointerEvent) => {
+  const onBoardPointerMove = (e: PointerEvent) => {
     if (!pointerActive) return;
     const idx = findCapNearPoint(e.clientX, e.clientY, 0.6);
     if (idx === -1) return;
@@ -99,74 +114,54 @@ export function attachInput({
       path.push(idx);
       pressTile(idx);
     }
-  });
+  };
 
-  board.addEventListener("pointerup", () => {
+  const onBoardPointerUp = () => {
     if (!pointerActive) return;
     pointerActive = false;
-
     if (pointerMoved) {
       onSubmit();
       typed = "";
     } else if (tappedOnEnd) {
-      // Tap on already-last tile = deselect it.
       path.pop();
     }
-
-    _pointerStartIdx = -1;
     pointerLastIdx = -1;
     pointerMoved = false;
     tappedOnEnd = false;
-  });
+  };
 
-  board.addEventListener("pointercancel", () => {
+  const onBoardPointerCancel = () => {
     pointerActive = false;
     pointerMoved = false;
-    _pointerStartIdx = -1;
     pointerLastIdx = -1;
     tappedOnEnd = false;
-  });
+  };
+
+  boardEl.addEventListener("pointerdown", onBoardPointerDown);
+  boardEl.addEventListener("pointermove", onBoardPointerMove);
+  boardEl.addEventListener("pointerup", onBoardPointerUp);
+  boardEl.addEventListener("pointercancel", onBoardPointerCancel);
 
   /* ---------- Tap-outside clears the path ---------- */
-  //
-  // During a round, tapping anywhere that isn't the board or one of
-  // the interactive word-bar controls clears whatever's in progress.
-  // On mobile this is the natural "oh, never mind" gesture — you don't
-  // want a half-built word to persist when the user taps a player
-  // pill or just the page background to scroll.
-  //
-  // We listen for pointerdown (not click) so it fires immediately,
-  // even if the tap lands on a non-clickable element. A small
-  // allowlist of elements the user might legitimately want to tap
-  // without wiping the path is exempted.
-  document.addEventListener("pointerdown", (e: PointerEvent) => {
+
+  const onDocPointerDown = (e: PointerEvent) => {
     if (getPhase() !== "playing") return;
     if (path.length() === 0) return;
     const target = e.target;
     if (!(target instanceof Element)) return;
-
-    // Tap on the board or its children: handled by the board's own
-    // pointerdown listener above.
-    if (dom.board.contains(target)) return;
-
-    // Word-bar controls (submit, undo, the current-word display
-    // itself). Tapping "submit" should of course not wipe the word
-    // we're submitting.
-    if (dom.wordBar.contains(target)) return;
-
-    // Feedback toast and interactive chrome elsewhere on the page.
+    if (boardEl.contains(target)) return;
+    if (wordBarEl && wordBarEl.contains(target)) return;
     if (target.closest("button, a, input, select, textarea, [role='button']")) {
       return;
     }
-
-    // Everything else: clear the in-progress path.
     typed = "";
     path.clear();
-  });
+  };
+  document.addEventListener("pointerdown", onDocPointerDown);
 
   /* ---------- Keyboard ---------- */
 
-  window.addEventListener("keydown", (e: KeyboardEvent) => {
+  const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       if (getPhase() === "playing") {
         typed = "";
@@ -180,7 +175,6 @@ export function attachInput({
     const active = document.activeElement as HTMLElement | null;
     if (
       active &&
-      active !== dom.wordInput &&
       active.tagName === "INPUT" &&
       (active as HTMLInputElement).type !== "hidden"
     ) {
@@ -210,14 +204,14 @@ export function attachInput({
 
     e.preventDefault();
 
-    // Seed typed buffer from current path if pointer was used earlier.
     if (typed.length === 0 && path.length() > 0) {
       typed = path.wordText(getBoard());
     }
-
     typed += e.key.toLowerCase();
     resolveTypedToPath(typed);
-  });
+  };
+
+  window.addEventListener("keydown", onKeyDown);
 
   function resolveTypedToPath(word: string): void {
     const board = getBoard();
@@ -242,15 +236,18 @@ export function attachInput({
       }
     }
   }
-}
 
-/** Haptic+audio+visual pulse for a tile landing. Central so we never
-    drift between handlers — typed resolve, tap, or drag all agree. */
-function pressTile(idx: number): void {
-  pulsePress(idx);
-  tap();
-}
+  // Unused-import hint — `neighbors` is part of the input surface area
+  // via findPathForWord → path.ts; reference it here so the dep graph
+  // is obvious.
+  void neighbors;
 
-// `neighbors` is imported but not used here — left as a hint for anyone
-// extending this file with neighbor-based keyboard fallbacks.
-void neighbors;
+  return () => {
+    boardEl.removeEventListener("pointerdown", onBoardPointerDown);
+    boardEl.removeEventListener("pointermove", onBoardPointerMove);
+    boardEl.removeEventListener("pointerup", onBoardPointerUp);
+    boardEl.removeEventListener("pointercancel", onBoardPointerCancel);
+    document.removeEventListener("pointerdown", onDocPointerDown);
+    window.removeEventListener("keydown", onKeyDown);
+  };
+}
