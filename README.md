@@ -26,12 +26,12 @@ the `ports:` block in `docker-compose.yml` to publish on a host port.
 
 ## Documentation
 
-**<https://docs.bawgle.alifbe.dev>**
+**<https://docs.bawgle.alifbae.dev>**
 
-- [Getting started](https://docs.bawgle.alifbe.dev/getting-started/)
-- [Deployment](https://docs.bawgle.alifbe.dev/deployment/)
-- [Development](https://docs.bawgle.alifbe.dev/development/)
-- [Monitoring](https://docs.bawgle.alifbe.dev/monitoring/)
+- [Getting started](https://docs.bawgle.alifbae.dev/getting-started/)
+- [Deployment](https://docs.bawgle.alifbae.dev/deployment/)
+- [Development](https://docs.bawgle.alifbae.dev/development/)
+- [Monitoring](https://docs.bawgle.alifbae.dev/monitoring/)
 
 ## License
 

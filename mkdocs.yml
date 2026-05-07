@@ -1,14 +1,13 @@
-# MkDocs site config for https://docs.bawgle.alifbe.dev
+# MkDocs site config for https://docs.bawgle.alifbae.dev
 #
-# Built by Cloudflare Pages (see .cloudflare/pages-build.sh) and by the
-# GitHub Actions workflow (.github/workflows/docs.yml) as a sanity
-# check on every PR that touches docs/. The Pages deploy is the
-# source of truth for what's live; CI just fails the build if docs
-# break.
+# Built by Cloudflare Pages and by the GitHub Actions workflow
+# (.github/workflows/docs.yml) as a sanity check on every PR that
+# touches docs/. The Pages deploy is the source of truth for what's
+# live; CI just fails the build if docs break.
 
 site_name: bawgle
 site_description: Self-hosted multiplayer Boggle. Documentation.
-site_url: https://docs.bawgle.alifbe.dev
+site_url: https://docs.bawgle.alifbae.dev
 site_author: alifbae
 repo_url: https://github.com/alifbae/bawgle
 repo_name: alifbae/bawgle
