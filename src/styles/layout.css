@@ -48,6 +48,22 @@ main {
   gap: 0.5rem;
 }
 
+/* Compact room code visible in the topbar once a room is joined.
+   Sits between the brand and the controls. Stays readable on mobile
+   where the lobby's larger .room-code-display is hidden. */
+.topbar-code {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 40%, var(--c-border));
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  user-select: text;
+}
+
 .timer {
   font-family: var(--font-mono);
   font-size: 0.9rem;

@@ -139,6 +139,18 @@ function runApp(): void {
     dom.roomCodeDisplay.textContent = state.code;
     updateRoomInUrl(state.code);
 
+    // Persistent room-code pill in the topbar. Shows any time we have
+    // a live room state so players can read it off during play and
+    // share with late joiners without leaving the game screen.
+    if (dom.topbarCode) {
+      if (state.code) {
+        dom.topbarCode.textContent = state.code;
+        dom.topbarCode.hidden = false;
+      } else {
+        dom.topbarCode.hidden = true;
+      }
+    }
+
     const isHost = !!state.hostId && !!meId && state.hostId === meId;
 
     renderPlayers(state, meId);

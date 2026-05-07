@@ -48,6 +48,9 @@ export const dom = {
   // Audio mute toggle in the topbar
   muteBtn: optionalEl<HTMLButtonElement>("mute-btn"),
 
+  // Persistent room-code pill in the topbar (visible in-game too)
+  topbarCode: optionalEl<HTMLElement>("topbar-code"),
+
   // Lobby
   tabs: document.querySelectorAll<HTMLButtonElement>(".tab"),
   tabPanels: document.querySelectorAll<HTMLElement>(".tab-panel"),
