@@ -10,7 +10,7 @@
 // IP we 429 instead of 401 for a cooldown window. Stops online
 // password guessing without needing a reverse-proxy rate-limit rule.
 
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { Context } from "hono";
 
 const ADMIN_USER = process.env.BAWGLE_ADMIN_USER || "admin";
@@ -18,28 +18,44 @@ const ADMIN_PASS = process.env.BAWGLE_ADMIN_PASS || "";
 
 export const adminEnabled = ADMIN_PASS.length > 0;
 
-// Throttle: after MAX_FAILS failures in the window, that IP is locked
-// out for COOLDOWN_MS. Sliding-window is overkill for this; we just
-// reset the counter when the oldest hit ages out.
+// Throttle: after MAX_FAILS distinct failed attempts in the window,
+// that IP is locked out for COOLDOWN_MS.
 //
-// We only count requests that actually *tried* credentials. A request
-// with no Authorization header is just "not logged in yet" and doesn't
-// advance the counter — otherwise the dashboard's 3s polling
-// interval could self-lock a legitimate user during a brief stale-
-// credential window.
+// Two important properties:
+//
+// 1. No Authorization header → not counted. That's the dashboard's
+//    first request before the browser prompts for creds, or the
+//    browser replaying after a stale token was rejected. Counting it
+//    would self-lock legitimate users during the 3s polling cycle.
+//
+// 2. Same bad password replayed repeatedly → counted as one attempt.
+//    The dashboard polls 3× every 3s with stored credentials. If
+//    those creds are stale (password rotated, wrong user autofilled),
+//    every poll sends the exact same wrong Authorization header.
+//    That's the same guess N times, not N distinct guesses. We
+//    dedupe via a hash of the Authorization value so a real attacker
+//    cycling passwords still accrues fails, but a stuck client
+//    doesn't self-lock.
 const MAX_FAILS = 10;
 const WINDOW_MS = 3 * 60_000;
 const COOLDOWN_MS = 5 * 60_000;
 
 interface FailState {
-  hits: number[]; // timestamps of recent failures
+  hits: number[]; // timestamps of recent distinct failures
   lockedUntil: number;
+  // Fingerprints (hashed Authorization headers) already counted in
+  // the current window, so we don't double-count a stuck client.
+  counted: Set<string>;
 }
 const failsByIp = new Map<string, FailState>();
 
 function pruneOldHits(state: FailState, now: number): void {
   const cutoff = now - WINDOW_MS;
   while (state.hits.length && state.hits[0]! < cutoff) state.hits.shift();
+  // If the window has fully rolled past the last attempt, reset the
+  // fingerprint dedupe set too so a later (distinct) retry with the
+  // same old password can count again.
+  if (state.hits.length === 0) state.counted.clear();
 }
 
 /**
@@ -67,18 +83,28 @@ function isLocked(ip: string): number {
   return 0;
 }
 
-function recordFail(ip: string): void {
+function recordFail(ip: string, authHeader: string): void {
   const now = Date.now();
   let s = failsByIp.get(ip);
   if (!s) {
-    s = { hits: [], lockedUntil: 0 };
+    s = { hits: [], lockedUntil: 0, counted: new Set() };
     failsByIp.set(ip, s);
   }
   pruneOldHits(s, now);
+  // Dedupe: a hash of the Authorization header counts as one guess
+  // no matter how many times it's replayed in the window. Fingerprint
+  // is a short SHA-256 slice; the header never leaves the process.
+  const fingerprint = createHash("sha256")
+    .update(authHeader)
+    .digest("hex")
+    .slice(0, 24);
+  if (s.counted.has(fingerprint)) return;
+  s.counted.add(fingerprint);
   s.hits.push(now);
   if (s.hits.length >= MAX_FAILS) {
     s.lockedUntil = now + COOLDOWN_MS;
-    s.hits.length = 0; // reset; cooldown is the gate now
+    s.hits.length = 0;
+    s.counted.clear();
   }
 }
 
@@ -136,8 +162,8 @@ export function requireAdmin(c: Context): Response | null {
     // `401` probe (no Authorization header) is the dashboard asking
     // the browser for creds, not a password guess — counting it would
     // self-lock legitimate users during the 3s polling cycle.
-    const hasAuthHeader = (c.req.header("authorization") || "").length > 0;
-    if (hasAuthHeader) recordFail(ip);
+    const authHeader = c.req.header("authorization") || "";
+    if (authHeader.length > 0) recordFail(ip, authHeader);
     return new Response("Unauthorized", {
       status: 401,
       headers: { "WWW-Authenticate": 'Basic realm="bawgle admin"' },

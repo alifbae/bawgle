@@ -2,17 +2,46 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.85rem 1rem;
+  padding: 0.5rem 0.6rem 0.5rem 1rem;
   background: var(--c-panel);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
-  min-height: 3rem;
+  /* Fixed height so the bar doesn't grow when submit/undo toggle
+     visibility. They stay in the layout (visibility: hidden, see
+     below) rather than `hidden` attribute so the row reserves the
+     space for them always. */
+  height: 3.25rem;
+  min-height: 3.25rem;
 }
 
 .word-bar .btn.primary {
-  padding: 0.45rem 0.9rem;
-  font-size: 0.82rem;
+  /* Submit: bigger, more prominent. Sized to the bar so it never
+     changes the row height. */
+  padding: 0 1.1rem;
+  height: 2.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
   white-space: nowrap;
+  letter-spacing: 0.03em;
+  flex: 0 0 auto;
+}
+
+.word-bar .icon-btn {
+  /* Inherits .icon-btn base size. Font bump so the undo arrow is
+     easier to read at a glance. */
+  font-size: 1.15rem;
+  flex: 0 0 auto;
+}
+
+/* Keep submit and undo in the layout even when the path is empty,
+   just hide them visually. Prevents the bar from jiggling as the
+   path grows/shrinks. `[hidden]` (the attribute) is overridden here
+   on purpose — JS still sets it, we just render a reserved slot. */
+.word-bar .icon-btn[hidden],
+.word-bar .btn.primary[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .possible-words,
@@ -67,16 +96,22 @@
 }
 
 .current-word {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 1.3rem;
   font-weight: 600;
   letter-spacing: 0.15em;
   color: var(--c-fg);
   text-transform: uppercase;
-  word-break: break-all;
-  min-height: 1.6rem;
-  line-height: 1.2;
+  /* Single-line with ellipsis overflow so a long word doesn't wrap
+     and bump the word-bar's height up. Scales down slightly on
+     narrower viewports via `fs` clamp. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 100%;
+  line-height: 1;
   display: flex;
   align-items: center;
 }

@@ -93,19 +93,20 @@ describe("admin auth", () => {
     const { requireAdmin, __resetAdminThrottleForTests } = await loadAuth();
     __resetAdminThrottleForTests();
 
-    const badAuth = buildContext({
-      authorization: basicHeader("admin", "nope"),
-      "x-forwarded-for": "1.2.3.4",
-    });
+    // Use a *different* wrong password each attempt — same password
+    // replayed is treated as one guess (see "stuck dashboard" test).
+    const tryPassword = (pw: string) =>
+      requireAdmin(
+        buildContext({
+          authorization: basicHeader("admin", pw),
+          "x-forwarded-for": "1.2.3.4",
+        }),
+      );
 
-    // MAX_FAILS is 10 per auth.ts; first N-1 should be 401.
     for (let i = 0; i < 10; i++) {
-      const r = requireAdmin(badAuth)!;
-      expect(r.status).toBe(401);
+      expect(tryPassword(`nope-${i}`)!.status).toBe(401);
     }
-
-    // 11th attempt from the same IP hits the lockout — 429.
-    const locked = requireAdmin(badAuth)!;
+    const locked = tryPassword("nope-final")!;
     expect(locked.status).toBe(429);
     expect(locked.headers.get("retry-after")).toMatch(/^\d+$/);
   });
@@ -123,12 +124,12 @@ describe("admin auth", () => {
       expect(r.status).toBe(401);
     }
 
-    // A fresh bad-creds attempt from the same IP should still be the
-    // first counted failure, not the 21st.
+    // Fresh distinct bad-creds attempts should still be able to rack
+    // up to MAX_FAILS before triggering the lockout.
     for (let i = 0; i < 10; i++) {
       const r = requireAdmin(
         buildContext({
-          authorization: basicHeader("admin", "wrong"),
+          authorization: basicHeader("admin", `wrong-${i}`),
           "x-forwarded-for": "5.6.7.8",
         }),
       )!;
@@ -140,46 +141,129 @@ describe("admin auth", () => {
     const { requireAdmin, __resetAdminThrottleForTests } = await loadAuth();
     __resetAdminThrottleForTests();
 
-    const badAuth = buildContext({
-      authorization: basicHeader("admin", "nope"),
-      "x-forwarded-for": "9.9.9.9",
-    });
     const goodAuth = buildContext({
       authorization: basicHeader("admin", "correct-horse-battery"),
       "x-forwarded-for": "9.9.9.9",
     });
+    const tryBad = (pw: string) =>
+      requireAdmin(
+        buildContext({
+          authorization: basicHeader("admin", pw),
+          "x-forwarded-for": "9.9.9.9",
+        }),
+      );
 
-    for (let i = 0; i < 9; i++) requireAdmin(badAuth);
+    for (let i = 0; i < 9; i++) tryBad(`pre-${i}`);
 
     // One success resets the counter.
     expect(requireAdmin(goodAuth)).toBeNull();
 
-    // 10 more bad attempts should still fit without tripping 429.
+    // 10 more distinct bad attempts should still fit without tripping.
     for (let i = 0; i < 10; i++) {
-      expect(requireAdmin(badAuth)!.status).toBe(401);
+      expect(tryBad(`post-${i}`)!.status).toBe(401);
     }
     // The 11th trips it.
-    expect(requireAdmin(badAuth)!.status).toBe(429);
+    expect(tryBad("post-final")!.status).toBe(429);
   });
 
   it("tracks throttle state per-IP — one bad actor doesn't lock the other", async () => {
     const { requireAdmin, __resetAdminThrottleForTests } = await loadAuth();
     __resetAdminThrottleForTests();
 
-    const badFromA = buildContext({
-      authorization: basicHeader("admin", "nope"),
-      "x-forwarded-for": "1.1.1.1",
-    });
     const goodFromB = buildContext({
       authorization: basicHeader("admin", "correct-horse-battery"),
       "x-forwarded-for": "2.2.2.2",
     });
 
-    // Lock out A.
-    for (let i = 0; i < 10; i++) requireAdmin(badFromA);
-    expect(requireAdmin(badFromA)!.status).toBe(429);
+    // Lock out A with 10 distinct wrong passwords.
+    for (let i = 0; i < 10; i++) {
+      requireAdmin(
+        buildContext({
+          authorization: basicHeader("admin", `nope-${i}`),
+          "x-forwarded-for": "1.1.1.1",
+        }),
+      );
+    }
+    expect(
+      requireAdmin(
+        buildContext({
+          authorization: basicHeader("admin", "nope-final"),
+          "x-forwarded-for": "1.1.1.1",
+        }),
+      )!.status,
+    ).toBe(429);
 
     // B is untouched.
     expect(requireAdmin(goodFromB)).toBeNull();
+  });
+
+  it("does not lock out a client replaying the same bad password (dashboard poll)", async () => {
+    // Regression: the dashboard fetches metrics/rooms/events every 3s.
+    // With a stale stored password, each poll sends the *same* wrong
+    // Authorization header. We should count that as one guess, not
+    // one guess per request — otherwise the user self-locks in ~10
+    // seconds without ever typing anything.
+    const { requireAdmin, __resetAdminThrottleForTests } = await loadAuth();
+    __resetAdminThrottleForTests();
+
+    const stuckDashboard = buildContext({
+      authorization: basicHeader("admin", "stale-password"),
+      "x-forwarded-for": "10.0.0.1",
+    });
+
+    // Simulate a minute of 3s polling × 3 calls each.
+    for (let i = 0; i < 60; i++) {
+      const r = requireAdmin(stuckDashboard)!;
+      expect(r.status).toBe(401);
+    }
+
+    // Should still be 401, not locked out — same password all the way.
+    expect(requireAdmin(stuckDashboard)!.status).toBe(401);
+  });
+
+  it("counts distinct wrong passwords separately (real attacker)", async () => {
+    // Flip side of the dedupe: if someone's *trying passwords* they
+    // still hit the lockout. Same IP, 11 different wrong passwords,
+    // should lock out.
+    const { requireAdmin, __resetAdminThrottleForTests } = await loadAuth();
+    __resetAdminThrottleForTests();
+
+    for (let i = 0; i < 10; i++) {
+      const r = requireAdmin(
+        buildContext({
+          authorization: basicHeader("admin", `guess-${i}`),
+          "x-forwarded-for": "10.0.0.2",
+        }),
+      )!;
+      expect(r.status).toBe(401);
+    }
+
+    // 11th distinct guess trips the lockout.
+    const locked = requireAdmin(
+      buildContext({
+        authorization: basicHeader("admin", "guess-11"),
+        "x-forwarded-for": "10.0.0.2",
+      }),
+    )!;
+    expect(locked.status).toBe(429);
+  });
+
+  it("allows a stuck dashboard to recover with correct credentials without waiting out the cooldown", async () => {
+    // Specific recovery path the user hit: stale password → refresh
+    // and enter the right one. Should succeed immediately.
+    const { requireAdmin, __resetAdminThrottleForTests } = await loadAuth();
+    __resetAdminThrottleForTests();
+
+    const stuck = buildContext({
+      authorization: basicHeader("admin", "wrong"),
+      "x-forwarded-for": "10.0.0.3",
+    });
+    const recovered = buildContext({
+      authorization: basicHeader("admin", "correct-horse-battery"),
+      "x-forwarded-for": "10.0.0.3",
+    });
+
+    for (let i = 0; i < 50; i++) requireAdmin(stuck);
+    expect(requireAdmin(recovered)).toBeNull();
   });
 });
