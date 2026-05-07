@@ -3,7 +3,7 @@
 // Cycling is a simple next-key-in-alphabetical-order operation.
 
 import { writable } from "svelte/store";
-import { THEMES, applyTheme, loadTheme } from "../../themes.ts";
+import { THEMES, applyTheme, loadTheme } from "../util/themes.ts";
 
 const keys = Object.keys(THEMES).sort((a, b) =>
   THEMES[a].name.localeCompare(THEMES[b].name),

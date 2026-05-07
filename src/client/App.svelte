@@ -14,8 +14,8 @@
   import NotFound from "./lib/views/NotFound.svelte";
   import ResultPage from "./lib/views/ResultPage.svelte";
 
-  import { primeOnFirstGesture } from "./ui/feedback.ts";
-  import { connectAndJoin, hasSocket } from "./lib/net.ts";
+  import { primeOnFirstGesture } from "./lib/util/audio.ts";
+  import { connectAndJoin, hasSocket } from "./lib/util/net.ts";
   import { room } from "./lib/stores/room.ts";
 
   type Route = "app" | "result" | "notFound";

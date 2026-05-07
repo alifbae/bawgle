@@ -2,11 +2,11 @@
 // messages into the room + feedback stores and calls back to the
 // caller for word-result audio/haptics.
 
-import { getClientId, setClientId } from "../util/client-id.ts";
-import { room } from "./stores/room.ts";
-import { flashFeedback } from "./stores/feedback.ts";
-import { submit as fbSubmit, reject as fbReject } from "../ui/feedback.ts";
-import type { ClientMsg, ServerMsg } from "../../shared/types.ts";
+import { getClientId, setClientId } from "./client-id.ts";
+import { room } from "../stores/room.ts";
+import { flashFeedback } from "../stores/feedback.ts";
+import { submit as fbSubmit, reject as fbReject } from "./audio.ts";
+import type { ClientMsg, ServerMsg } from "../../../shared/types.ts";
 
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 15000];
 

@@ -12,10 +12,10 @@ import { Hono } from "hono";
 
 async function freshApi() {
   vi.resetModules();
-  const rooms = await import("../../server/rooms.ts");
-  const storage = await import("../../server/storage.ts");
-  const metrics = await import("../../server/metrics.ts");
-  const dictionary = await import("../../server/dictionary.ts");
+  const rooms = await import("../../src/server/rooms.ts");
+  const storage = await import("../../src/server/storage.ts");
+  const metrics = await import("../../src/server/metrics.ts");
+  const dictionary = await import("../../src/server/dictionary.ts");
   metrics.configureLogging({ dir: null });
 
   // Rebuild just the round endpoints onto a local Hono app.

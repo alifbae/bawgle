@@ -1,7 +1,7 @@
 // Finds a valid Boggle path on the board that spells a given prefix.
 // Walks 8-way adjacency, uses each cell at most once, handles "Qu" as one cell.
 
-import { neighbors } from "../lib/stores/adjacency.ts";
+import { neighbors } from "../stores/adjacency.ts";
 
 function tokens(word: string): string[] {
   const w = word.toUpperCase();

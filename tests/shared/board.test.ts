@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rollBoard, wordPathExists } from "../../shared/board.ts";
+import { rollBoard, wordPathExists } from "../../src/shared/board.ts";
 
 describe("rollBoard", () => {
   it("produces the right number of cells per size", () => {

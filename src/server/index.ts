@@ -14,18 +14,19 @@ import {
 import { loadDictionary, lookupDefinition } from "./dictionary.ts";
 import { bumpCounter, configureLogging, sweepLogs } from "./metrics.ts";
 import { closeStorage, initStorage, pruneOldRounds } from "./storage.ts";
-import { adminEnabled, registerAdminRoutes } from "./admin/index.ts";
+import { adminEnabled, registerAdminRoutes } from "../admin-panel/index.ts";
 import { attachNetcode } from "./netcode.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DIST_DIR = join(__dirname, "../dist");
+// src/server/index.ts → repo root is two levels up.
+const DIST_DIR = join(__dirname, "../../dist");
 const PORT = Number(process.env.PORT || 3001);
 const ENVIRONMENT = process.env.BAWGLE_ENVIRONMENT || "production";
 const IS_DEV = ENVIRONMENT === "development";
 const DATA_DIR =
   process.env.BAWGLE_DATA_DIR ||
   process.env.BOGGLE_DATA_DIR /* legacy env var */ ||
-  join(__dirname, "..", "data");
+  join(__dirname, "..", "..", "data");
 // Default DB filename kept as boggle.db so an existing homelab's volume
 // (which already has rooms persisted) keeps working after the rename.
 const DB_PATH =

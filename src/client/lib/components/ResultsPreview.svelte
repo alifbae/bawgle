@@ -10,7 +10,7 @@
   import { untrack } from "svelte";
   import Board from "./Board.svelte";
   import { createPathStore } from "../stores/path.ts";
-  import { findPathForWord } from "../../game/resolver.ts";
+  import { findPathForWord } from "../util/resolver.ts";
 
   type Props = {
     board: string[] | null;

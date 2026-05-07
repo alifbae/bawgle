@@ -5,10 +5,10 @@
   "packageManager": "pnpm@9.12.0",
   "type": "module",
   "scripts": {
-    "dev": "BAWGLE_ENVIRONMENT=development concurrently -n client,server,admin -c cyan,magenta,yellow \"vite --port 5175\" \"tsx watch --env-file-if-exists=./.env server/index.ts\" \"tsx server/admin/build.ts --watch\"",
+    "dev": "BAWGLE_ENVIRONMENT=development concurrently -n client,server,admin -c cyan,magenta,yellow \"vite --port 5175\" \"tsx watch --env-file-if-exists=./.env src/server/index.ts\" \"tsx src/admin-panel/build.ts --watch\"",
     "build": "pnpm run build:admin && vite build",
-    "build:admin": "tsx server/admin/build.ts",
-    "start": "NODE_ENV=production tsx server/index.ts",
+    "build:admin": "tsx src/admin-panel/build.ts",
+    "start": "NODE_ENV=production tsx src/server/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

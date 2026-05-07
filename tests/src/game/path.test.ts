@@ -4,8 +4,8 @@ import {
   isAdjacent,
   neighbors,
   setBoardSize,
-} from "../../../src/lib/stores/adjacency.ts";
-import { createPathStore } from "../../../src/lib/stores/path.ts";
+} from "../../../src/client/lib/stores/adjacency.ts";
+import { createPathStore } from "../../../src/client/lib/stores/path.ts";
 
 describe("isAdjacent / neighbors", () => {
   beforeEach(() => setBoardSize(4));

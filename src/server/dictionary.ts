@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DICT_DIR = join(__dirname, "..", "data", "dictionary");
+// src/server/dictionary.ts → repo root is two levels up.
+const DICT_DIR = join(__dirname, "..", "..", "data", "dictionary");
 
 // Trie node: `end` marks a complete word. Children keyed by single letters.
 // For Boggle, we fold the "Qu" die into the trie by treating "qu" as two

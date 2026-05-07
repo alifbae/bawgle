@@ -8,10 +8,10 @@
   import { onDestroy, untrack } from "svelte";
   import { isHost, room } from "../stores/room.ts";
   import { createPathStore } from "../stores/path.ts";
-  import { attachInput } from "../input.ts";
-  import { send } from "../net.ts";
+  import { attachInput } from "../util/input.ts";
+  import { send } from "../util/net.ts";
   import { flashFeedback } from "../stores/feedback.ts";
-  import { copyInviteLink, shareRound } from "../share.ts";
+  import { copyInviteLink, shareRound } from "../util/share.ts";
 
   import Board from "../components/Board.svelte";
   import Countdown from "../components/Countdown.svelte";

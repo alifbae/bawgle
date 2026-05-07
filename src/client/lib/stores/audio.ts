@@ -1,10 +1,10 @@
-// Small audio-enabled store on top of the existing feedback module.
+// Small audio-enabled store on top of the audio utility module.
 // Components subscribe to re-render the mute icon; the underlying
-// persistence still lives in src/ui/feedback.ts so the sound
+// persistence still lives in src/lib/util/audio.ts so the sound
 // generation logic stays put.
 
 import { writable } from "svelte/store";
-import { isAudioEnabled, setAudioEnabled } from "../../ui/feedback.ts";
+import { isAudioEnabled, setAudioEnabled } from "../util/audio.ts";
 
 const store = writable<boolean>(isAudioEnabled());
 

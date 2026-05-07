@@ -6,11 +6,11 @@
 // Keyboard typing builds a typed-word buffer and uses the resolver to
 // find a matching path with full lookahead.
 
-import { findPathForWord } from "../game/resolver.ts";
-import { isAdjacent, neighbors } from "./stores/adjacency.ts";
-import { tap } from "../ui/feedback.ts";
-import type { PathStore } from "./stores/path.ts";
-import { flashFeedback } from "./stores/feedback.ts";
+import { findPathForWord } from "./resolver.ts";
+import { isAdjacent, neighbors } from "../stores/adjacency.ts";
+import { tap } from "./audio.ts";
+import type { PathStore } from "../stores/path.ts";
+import { flashFeedback } from "../stores/feedback.ts";
 
 export interface AttachInputOptions {
   boardEl: HTMLElement;

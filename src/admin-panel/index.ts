@@ -1,22 +1,22 @@
 // Admin HTTP surface. All routes are behind HTTP Basic auth; see
 // ./auth.ts. The static assets (HTML, CSS, JS) live in ./assets/ and
 // are served from disk so they can be edited without touching server
-// code. The Dockerfile copies the whole `server/` tree, so nested
-// assets ship automatically.
+// code. The Dockerfile copies src/admin-panel so nested assets ship
+// automatically.
 
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, extname, join, normalize } from "node:path";
 import type { Hono } from "hono";
 
-import { purgeRoom, roomsSnapshot, roomsSummary } from "../rooms.ts";
+import { purgeRoom, roomsSnapshot, roomsSummary } from "../server/rooms.ts";
 import {
   listLogFiles,
   processStats,
   readLogFile,
   recentEvents,
   snapshotCounters,
-} from "../metrics.ts";
+} from "../server/metrics.ts";
 
 import { adminEnabled, requireAdmin } from "./auth.ts";
 

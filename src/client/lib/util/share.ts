@@ -2,9 +2,9 @@
 // share (results screen). Both fall through the same ladder:
 // Web Share API → clipboard → window.prompt.
 
-import { flashFeedback } from "./stores/feedback.ts";
-import { buildShareText } from "../ui/share-text.ts";
-import type { RoomState } from "../../shared/types.ts";
+import { flashFeedback } from "../stores/feedback.ts";
+import { buildShareText } from "./share-text.ts";
+import type { RoomState } from "../../../shared/types.ts";
 
 export async function copyInviteLink(): Promise<boolean> {
   const link = location.href;

@@ -15,8 +15,6 @@
     "types": ["svelte", "vite/client"]
   },
   "include": [
-    "server/**/*",
-    "shared/**/*",
     "src/**/*",
     "src/**/*.svelte",
     "tests/**/*",

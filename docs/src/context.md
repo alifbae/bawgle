@@ -26,7 +26,7 @@ admin bundle, **Vitest** for tests.
                           │  HTTPS + WebSocket upgrade
                 ┌─────────▼─────────┐
                 │  Node process     │   Hono + ws
-                │  (server/index)   │   port 3001
+                │  (src/server/index) │   port 3001
                 └─────────┬─────────┘
         ┌─────────────────┼─────────────────┐
         │                 │                 │
@@ -43,7 +43,9 @@ product target is "homelab, one container".
 
 ## Directory map
 
-- `server/` — Node server. Start here.
+Everything lives under `src/`, split by deployment target:
+
+- `src/server/` — Node server. Start here.
   - `index.ts` — boot, Hono app, SPA fallback, shutdown hooks
   - `rooms.ts` — **the heart.** Room lifecycle, round state machine,
     host transfer, ready-up, sweep of idle rooms, persistence hooks,
@@ -57,23 +59,30 @@ product target is "homelab, one container".
     definitions + inflection resolution
   - `metrics.ts` — counters, 500-entry ring buffer, JSONL persistence
     with daily rotation, retention sweep
-  - `admin/` — Basic-auth, throttle, JSON API, static asset serving
-    for the dashboard
-- `shared/` — code that ships to both server and client
+- `src/admin-panel/` — admin dashboard host + plain-DOM client
+  - `index.ts` — Hono routes mounted by the server (`/admin/*`,
+    `/api/admin/*`)
+  - `auth.ts` — HTTP Basic auth with per-IP fail throttle
+  - `build.ts` — esbuild wrapper that compiles `assets/app.ts` →
+    `assets/app.js`
+  - `assets/` — static HTML, CSS, and the compiled dashboard client
+- `src/shared/` — code used by both server and client
   - `types.ts` — `RoomState`, `ClientMsg`, `ServerMsg`, scoring,
     settings limits
   - `board.ts` — dice sets (4×4, 5×5, 6×6), `rollBoard`,
     `wordPathExists`
-- `src/` — Vite SPA
-  - `main.ts` — **route dispatch entry point.** Checks path, imports
-    the right page module. `/`, `/result`, or 404
-  - `net.ts` — WebSocket client with exponential-backoff reconnect
-  - `game/path.ts` — currently-being-traced path store with change
-    callbacks
-  - `game/input.ts` — pointer + keyboard input to path store
-  - `ui/*.ts` — small, focused UI modules
-  - `styles/*.css` — split by concern, imported from
-    `src/style.css`
+- `src/client/` — Svelte 5 SPA built with Vite
+  - `main.ts` — mounts `App.svelte` into `<body>`
+  - `App.svelte` — path-based router (`/`, `/result`, 404)
+  - `lib/components/` — leaf components (Board, PlayerList, Timer,
+    WordBar, Settings, Results, etc.)
+  - `lib/views/` — top-level views: `Room`, `ResultPage`, `NotFound`
+  - `lib/stores/` — Svelte stores (`room`, `path`, `theme`, `audio`,
+    `feedback`, `adjacency`)
+  - `lib/util/` — pure helpers: `net` (WebSocket), `input` (pointer +
+    keyboard), `resolver` (board path-finder), `themes`, `share`,
+    `audio`, `share-text`, `client-id`, `escape`
+  - `lib/styles/` — split CSS partials, imported from `style.css`
 - `data/` — runtime state (SQLite DB, WAL, daily logs) + shipped
   dictionary
 - `scripts/` — maintenance tools (dictionary rebuild, solver verify,
@@ -169,7 +178,7 @@ as long as they have no live socket.
 
 ## Security surface
 
-- **CSP + security headers** on every response (`server/index.ts`).
+- **CSP + security headers** on every response (`src/server/index.ts`).
 - **Admin auth** — Basic auth with constant-time compare. Per-IP
   throttle locks out 5 minutes after 10 distinct bad credentials in 3
   minutes. Repeated identical bad creds (stuck client) count as one.
@@ -192,7 +201,7 @@ as long as they have no live socket.
 Loaded once on boot into a `Set<string>` for membership and a `Trie`
 for the solver. `solveBoard(board, size)` returns every valid word
 reachable on the board; `wordPathExists` is a shared helper that
-lives in `shared/board.ts` so both server and client can validate.
+lives in `src/shared/board.ts` so both server and client can validate.
 
 The `Qu` die is stored as the two-character cell `"Qu"`. The solver
 consumes both characters at once during trie walk; `wordPathExists`
@@ -200,14 +209,15 @@ on the client normalizes `Q+U` back to that single cell.
 
 ## Client routing
 
-`src/main.ts` switches on `location.pathname`:
+`src/client/main.ts` mounts the Svelte app into `<body>`.
+`App.svelte` switches on `location.pathname`:
 
 - `/`, `/index.html`, trailing slash tolerated → the full app
   (lobby → room → results)
 - `/result` → shareable round view. Accepts `?round=N` for a
   specific round or `?room=XXXX` for the most recent round in a
-  room. Dynamically imports `src/ui/result-page.ts`
-- anything else → 404 page via `src/ui/not-found.ts`
+  room. Rendered by `src/client/lib/views/ResultPage.svelte`
+- anything else → 404 page via `src/client/lib/views/NotFound.svelte`
 
 Each branch dynamically imports its page module so the lobby flow
 doesn't pull in the results-page CSS/JS and vice versa.
@@ -262,7 +272,7 @@ Vitest. `pnpm test` runs everything. Patterns:
 - `BOGGLE_DATA_DIR` / `BOGGLE_DB` env vars still read — same reason
 - `__beginRoundForTests` — some tests predate the pre-round
   countdown and assume `startRound` → `playing` is atomic
-- Inline security headers in `server/index.ts` rather than a
+- Inline security headers in `src/server/index.ts` rather than a
   middleware package — keeps the dependency surface tiny
 - `admin_action` event type is reserved but not emitted yet —
   placeholder for future admin writes
@@ -278,26 +288,27 @@ Vitest. `pnpm test` runs everything. Patterns:
 
 ## When you're asked to…
 
-- **Change the protocol:** update `shared/types.ts` first (both
+- **Change the protocol:** update `src/shared/types.ts` first (both
   sides import it). Then server dispatch in `netcode.ts` / `rooms.ts`,
-  then client `main.ts` / `net.ts`. Types will force you to update
+  then client `lib/util/net.ts`. Types will force you to update
   both.
-- **Add a game rule:** scoring lives in `shared/types.ts`
+- **Add a game rule:** scoring lives in `src/shared/types.ts`
   (`scoreWord`), word validation is a chain inside
-  `rooms.submitWord`, path validation is `shared/board.wordPathExists`.
+  `rooms.submitWord`, path validation is
+  `src/shared/board.wordPathExists`.
 - **Add a metric:** `bumpCounter(name)` for simple counters,
   `recordEvent(type, data)` for structured events. If the event is
   high-volume, only counter it (see `word_accepted`).
 - **Add a setting:** extend `RoomSettings` + `SETTINGS_LIMITS` in
-  `shared/types.ts`, handle clamping in `rooms.updateSettings`,
-  surface it in `src/ui/settings.ts`.
+  `src/shared/types.ts`, handle clamping in `rooms.updateSettings`,
+  surface it in `src/client/lib/components/Settings.svelte`.
 - **Touch persistence:** any schema change needs a forward-compatible
   migration. `storage.ts` demonstrates the pattern with the
   `players.ready` column — check `PRAGMA table_info`, add the column
   if missing, bump `SCHEMA_VERSION`.
 - **Add an admin endpoint:** put the route in
-  `server/admin/index.ts`, wrap with `requireAdmin(c)` which returns
-  `Response` on fail (you `return` it) or `null` to proceed.
+  `src/admin-panel/index.ts`, wrap with `requireAdmin(c)` which
+  returns `Response` on fail (you `return` it) or `null` to proceed.
 
 ## Scripts worth knowing
 

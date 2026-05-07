@@ -9,10 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // alternative is adding a reset() export that exists only for tests.
 async function freshRooms() {
   vi.resetModules();
-  const rooms = await import("../../server/rooms.ts");
-  const storage = await import("../../server/storage.ts");
-  const metrics = await import("../../server/metrics.ts");
-  const dictionary = await import("../../server/dictionary.ts");
+  const rooms = await import("../../src/server/rooms.ts");
+  const storage = await import("../../src/server/storage.ts");
+  const metrics = await import("../../src/server/metrics.ts");
+  const dictionary = await import("../../src/server/dictionary.ts");
   // Silence log-to-disk during tests.
   metrics.configureLogging({ dir: null });
   return { rooms, storage, dictionary };

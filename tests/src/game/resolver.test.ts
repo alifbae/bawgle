@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { setBoardSize } from "../../../src/lib/stores/adjacency.ts";
-import { findPathForWord } from "../../../src/game/resolver.ts";
+import { setBoardSize } from "../../../src/client/lib/stores/adjacency.ts";
+import { findPathForWord } from "../../../src/client/lib/util/resolver.ts";
 
 describe("findPathForWord", () => {
   beforeEach(() => setBoardSize(4));
@@ -34,7 +34,7 @@ describe("findPathForWord", () => {
     const path = findPathForWord(board, "cats");
     expect(path).not.toBeNull();
     expect(path).toHaveLength(4);
-    const letters = path!.map((i) => board[i]).join("");
+    const letters = path!.map((i: number) => board[i]).join("");
     expect(letters.toUpperCase()).toBe("CATS");
   });
 

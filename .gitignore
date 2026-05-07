@@ -16,7 +16,7 @@ data/boggle.db*
 *.db-wal
 
 # Generated admin dashboard bundle (compiled from app.ts)
-server/admin/assets/app.js
+src/admin-panel/assets/app.js
 
 # Cached Wiktionary dump + frequency list (rebuilt on demand)
 .cache/

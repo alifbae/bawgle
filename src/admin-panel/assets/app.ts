@@ -8,8 +8,8 @@
 // appending the API path. Asset URLs stay child-relative (`./assets/`)
 // because they really do live under /admin/.
 
-import type { RoomSnapshot } from "../../rooms.ts";
-import type { LogFileInfo, LoggedEvent } from "../../metrics.ts";
+import type { RoomSnapshot } from "../../server/rooms.ts";
+import type { LogFileInfo, LoggedEvent } from "../../server/metrics.ts";
 
 // ─── Server response shapes ─────────────────────────────────────────
 // Mirror the JSON Hono returns. Kept local so the admin bundle doesn't

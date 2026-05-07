@@ -7,7 +7,7 @@
 //
 //   bawgle - 👑 ALFA (30), BETA (22), GAMA (10) https://.../result?round=42
 
-import type { RoomState } from "../../shared/types.ts";
+import type { RoomState } from "../../../shared/types.ts";
 
 /**
  * Build a WhatsApp-friendly share message. Falls back to just the URL
