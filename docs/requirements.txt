@@ -1,0 +1,6 @@
+# Pinned so Cloudflare Pages and CI build the same site.
+# Bump deliberately; Material's minor versions occasionally change
+# theme CSS/HTML in visible ways.
+mkdocs==1.6.1
+mkdocs-material==9.5.44
+pymdown-extensions==10.12

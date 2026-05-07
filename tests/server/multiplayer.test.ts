@@ -16,6 +16,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 import type { ServerMsg } from "../../shared/types.ts";
 
+// Capture the real timer primitives at module load, BEFORE any test
+// installs vi.useFakeTimers. The test helpers below (TestClient.next,
+// nextMatching, wait) all use these captures so their timeouts tick on
+// real wall time regardless of whether the test under them is faking
+// setTimeout for server-side countdowns. Without this, a 2000ms
+// message-wait in nextMatching would fire instantly inside an
+// advanceTimersByTimeAsync(5_100) and reject before real WS messages
+// could arrive over loopback.
+const realSetTimeout: typeof setTimeout = globalThis.setTimeout.bind(globalThis);
+const realClearTimeout: typeof clearTimeout =
+  globalThis.clearTimeout.bind(globalThis);
+
 async function freshServer(): Promise<{
   url: string;
   http: HttpServer;
@@ -109,13 +121,16 @@ class TestClient {
     const immediate = this.queue.shift();
     if (immediate) return Promise.resolve(immediate);
     return new Promise<ServerMsg>((resolve, reject) => {
-      const t = setTimeout(() => {
+      // Real-timer setTimeout so this helper keeps ticking on wall
+      // time even when a test installs vi.useFakeTimers to drive
+      // server-side countdowns.
+      const t = realSetTimeout(() => {
         const idx = this.waiters.indexOf(settle);
         if (idx >= 0) this.waiters.splice(idx, 1);
         reject(new Error(`no message within ${timeoutMs}ms`));
       }, timeoutMs);
       const settle = (m: ServerMsg) => {
-        clearTimeout(t);
+        realClearTimeout(t);
         resolve(m);
       };
       this.waiters.push(settle);
@@ -128,9 +143,12 @@ class TestClient {
     predicate: (m: Extract<ServerMsg, { t: T }>) => boolean = () => true,
     timeoutMs = 2000,
   ): Promise<Extract<ServerMsg, { t: T }>> {
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-      const msg = await this.next(Math.max(10, deadline - Date.now()));
+    // Deadline on real wall time — not fake — so tests with faked
+    // setTimeout can still rely on this helper to time out correctly.
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const remaining = Math.max(10, timeoutMs - (Date.now() - start));
+      const msg = await this.next(remaining);
       if (msg.t === type && predicate(msg as Extract<ServerMsg, { t: T }>)) {
         return msg as Extract<ServerMsg, { t: T }>;
       }
@@ -176,7 +194,8 @@ async function joinRoom(
 }
 
 function wait(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+  // Real-timer wait, unaffected by vi.useFakeTimers.
+  return new Promise((r) => realSetTimeout(r, ms));
 }
 
 describe("multiplayer — host sees each new player join", () => {
@@ -304,9 +323,32 @@ describe("multiplayer — reconnect and host preservation", () => {
       const hostId = hostA.playerId;
       await hostA.client.terminate();
 
-      // Wait for the disconnect to register. Terminate-side close
-      // handler runs on next tick.
-      await wait(20);
+      // The close handler runs on the next tick and transfers the
+      // crown. There's nobody else connected yet, so the only signal
+      // we have is internal — poll briefly until the room sees the
+      // host as disconnected via a fresh probe connection. Keeping
+      // this deterministic stops the "new player joins before close
+      // landed" flake on loaded runners.
+      {
+        const probe = new TestClient(srv.url);
+        await probe.open();
+        probe.send({
+          t: "join",
+          code: "HSTK",
+          name: "PROB",
+          clientId: "c-probe",
+        });
+        await probe.nextMatching(
+          "joined",
+          (m) => {
+            const original = m.state.players.find((p) => p.id === hostId);
+            return !!original && original.connected === false;
+          },
+          2000,
+        );
+        probe.send({ t: "leave" });
+        await probe.close();
+      }
 
       // New player joins while host is offline.
       const newbie = await joinRoom(srv.url, "HSTK", "NEWB", "c-newbie");
@@ -406,10 +448,18 @@ describe("multiplayer — state broadcasts after play-again", () => {
 
   it("returnToLobby broadcasts reach every peer", async () => {
     // Direct test of the play-again broadcast path using a fake timer
-    // to end the round instantly, then calling returnToLobby through
-    // the module API. Validates the broadcast plumbing that the user
-    // reported as "page didn't auto-refresh after play-again."
+    // to end the round instantly. Validates the broadcast plumbing
+    // the user reported as "page didn't auto-refresh after play-again."
+    //
+    // Fake-timer + real-WebSocket gotcha: every real send() below
+    // needs real wall-time to reach the server before we can advance
+    // fake timers, otherwise the server hasn't scheduled the timeout
+    // we're trying to advance past. `settleIO` yields real time so
+    // the `start` frame lands and the countdown timer gets registered
+    // before advanceTimersByTimeAsync runs.
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const settleIO = () =>
+      new Promise<void>((resolve) => realSetTimeout(resolve, 30));
     try {
       const rooms = await import("../../server/rooms.ts");
 
@@ -419,12 +469,13 @@ describe("multiplayer — state broadcasts after play-again", () => {
 
       a.client.send({ t: "ready", ready: true });
       b.client.send({ t: "ready", ready: true });
-      await vi.advanceTimersByTimeAsync(50);
+      await settleIO();
       host.client.drain();
       a.client.drain();
       b.client.drain();
 
       host.client.send({ t: "start" });
+      await settleIO();
       // Skip past the pre-round countdown so `playing` can land.
       await vi.advanceTimersByTimeAsync(5_100);
       await host.client.nextMatching(
@@ -467,6 +518,7 @@ describe("multiplayer — state broadcasts after play-again", () => {
 
       // Host clicks "play again."
       host.client.send({ t: "lobby" });
+      await settleIO();
       const hostLobby = await host.client.nextMatching(
         "state",
         (m) => m.state.phase === "lobby",
@@ -539,11 +591,25 @@ describe("multiplayer — reconnect restores existing player slot", () => {
     const player = await joinRoom(srv.url, "RCNX", "PLYR", "c-p");
     const originalPlayerId = player.playerId;
 
-    // Drop the player's connection.
+    // Drop the player's connection, then wait for the server-side
+    // close handler to mark the player disconnected. Using a fixed
+    // sleep here was flaky on loaded boxes — if the reconnect
+    // arrived before the close fired, the server treated the
+    // previous socket as still-alive and minted a synthetic clientId
+    // for the "second tab," breaking the playerId equality check.
+    host.client.drain();
     await player.client.terminate();
-    await wait(20);
+    await host.client.nextMatching(
+      "state",
+      (m) => {
+        const p = m.state.players.find((pl) => pl.id === originalPlayerId);
+        return !!p && p.connected === false;
+      },
+      2000,
+    );
 
-    // Reconnect with same clientId.
+    // Reconnect with same clientId. Server should re-use the
+    // original slot now that the previous socket is known-closed.
     const rejoin = new TestClient(srv.url);
     await rejoin.open();
     rejoin.send({ t: "join", code: "RCNX", name: "PLYR", clientId: "c-p" });

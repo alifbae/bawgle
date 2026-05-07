@@ -27,3 +27,8 @@ server/admin/assets/app.js
 # Runtime event logs (JSONL, one per day, retained per BAWGLE_LOG_RETENTION_DAYS)
 data/logs/
 *.jsonl
+
+# MkDocs build output
+docs/site/
+.venv/
+__pycache__/

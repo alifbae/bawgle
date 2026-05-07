@@ -1,0 +1,103 @@
+# MkDocs site config for https://docs.bawgle.alifbe.dev
+#
+# Built by Cloudflare Pages (see .cloudflare/pages-build.sh) and by the
+# GitHub Actions workflow (.github/workflows/docs.yml) as a sanity
+# check on every PR that touches docs/. The Pages deploy is the
+# source of truth for what's live; CI just fails the build if docs
+# break.
+
+site_name: bawgle
+site_description: Self-hosted multiplayer Boggle. Documentation.
+site_url: https://docs.bawgle.alifbe.dev
+site_author: alifbae
+repo_url: https://github.com/alifbae/bawgle
+repo_name: alifbae/bawgle
+edit_uri: edit/main/docs/
+copyright: MIT licensed
+
+docs_dir: docs/src
+# Output lives alongside sources under docs/. Cloudflare Pages points
+# its "Build output directory" at `docs/site`. Gitignored.
+site_dir: docs/site
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme)"
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-auto
+        name: Match system
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Development: development.md
+  - Deployment: deployment.md
+  - Monitoring: monitoring.md
+  - For AI agents: context.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.keys
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/alifbae/bawgle
+
+# Fail the build on broken links / refs so CI catches typos before
+# Cloudflare Pages does.
+strict: true
