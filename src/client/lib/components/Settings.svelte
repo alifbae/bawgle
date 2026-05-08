@@ -36,7 +36,8 @@
     const same =
       lastSent &&
       lastSent.size === pending.size &&
-      lastSent.roundSeconds === pending.roundSeconds;
+      lastSent.roundSeconds === pending.roundSeconds &&
+      lastSent.private === pending.private;
     if (!same) {
       onChange(pending);
       lastSent = { ...pending };
@@ -50,6 +51,12 @@
 
   function pickSize(size: 4 | 5 | 6): void {
     queue({ size });
+    flush();
+  }
+
+  function pickVisibility(isPrivate: boolean): void {
+    if (isPrivate === settings.private) return;
+    queue({ private: isPrivate });
     flush();
   }
 
@@ -93,6 +100,25 @@
       onchange={flush}
     />
     <span class="settings-value">{fmt(settings.roundSeconds)}</span>
+  </div>
+  <div class="settings-row">
+    <div class="settings-label">visibility</div>
+    <div class="seg" role="radiogroup" aria-label="Room visibility">
+      <button
+        type="button"
+        class="seg-btn"
+        role="radio"
+        aria-checked={!settings.private ? "true" : "false"}
+        onclick={() => pickVisibility(false)}
+      >public</button>
+      <button
+        type="button"
+        class="seg-btn"
+        role="radio"
+        aria-checked={settings.private ? "true" : "false"}
+        onclick={() => pickVisibility(true)}
+      >private</button>
+    </div>
   </div>
 </div>
 

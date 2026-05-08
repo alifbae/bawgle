@@ -21,6 +21,13 @@ export interface RoomSettings {
   roundSeconds: number;
   // Board edge length. 4 (Boggle), 5 (Big Boggle), 6 (Super Big Boggle).
   size: 4 | 5 | 6;
+  /**
+   * When true the room is hidden from `/api/rooms/public` so casual
+   * drive-bys on the lobby list can't see it or join. The 4-letter
+   * code still works as a direct/share URL. Default is false so
+   * existing behavior (public = visible) is unchanged.
+   */
+  private: boolean;
 }
 
 export const SETTINGS_LIMITS = {
@@ -41,6 +48,7 @@ export const DEV_MIN_ROUND_SECONDS = 5;
 export const DEFAULT_SETTINGS: RoomSettings = {
   roundSeconds: 180,
   size: 4,
+  private: false,
 };
 
 export interface RoomState {
@@ -64,12 +72,28 @@ export interface RoomState {
   // this to generate stable /result?round=N share links. Null until the
   // first round of the session ends.
   lastRoundId: number | null;
+  /**
+   * When the host has tried to start a round but some players aren't
+   * ready, the server arms a grace window. `forceStartReadyAt` is the
+   * epoch ms after which the host may send `{t: "start", force: true}`
+   * to begin the round anyway. Null when there's no pending override
+   * (either everyone's ready, the host hasn't tried yet, or a
+   * ready-up resolved the stall).
+   */
+  forceStartReadyAt: number | null;
 }
 
 /* Client -> server */
 export type ClientMsg =
   | { t: "join"; code: string; name: string; clientId: string }
-  | { t: "start" }
+  /**
+   * Host-initiated round start. With `force: true` the host overrides
+   * the "everyone ready" gate — only honoured after the room has been
+   * in the force-start window long enough (see
+   * `RoomState.forceStartReadyAt`). A force flag in any other context
+   * is ignored.
+   */
+  | { t: "start"; force?: boolean }
   | { t: "lobby" }
   | { t: "ready"; ready: boolean }
   | { t: "word"; word: string }

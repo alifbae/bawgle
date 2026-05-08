@@ -29,6 +29,7 @@ function makeState(code: string, overrides: Partial<RoomState> = {}): RoomState 
     possibleCount: 0,
     possibleWords: [],
     lastRoundId: null,
+    forceStartReadyAt: null,
     ...overrides,
   };
 }

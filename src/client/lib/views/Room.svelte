@@ -129,6 +129,50 @@
     nonHostConnected.length === 0 || nonHostConnected.every((p) => p.ready),
   );
   const countingDown = $derived($room.state?.startsAt !== null && $room.state?.startsAt !== undefined);
+
+  // Whether the center-slot (between room-header and board) has any
+  // content to render this tick. When false the whole slot is
+  // omitted — avoids an empty padded <div> that creates visible
+  // space between the room header and the lobby tutorial.
+  const showWaitingHostStart = $derived(
+    $room.state?.phase === "lobby" && !$isHost && !meReady && allReady,
+  );
+  const showReadyUp = $derived(
+    $room.state?.phase === "lobby" && !allReady && !$isHost && !meReady,
+  );
+  const showTimer = $derived($room.state?.phase === "playing");
+  const centerSlotUsed = $derived(
+    showWaitingHostStart || showReadyUp || showTimer,
+  );
+
+  // Local tick for the force-start progress stripe + countdown label
+  // under the host's start button. We read `forceStartReadyAt` off the
+  // server snapshot; this tick just drives the rerender cadence.
+  let nowMs = $state(Date.now());
+  $effect(() => {
+    if ($room.state?.forceStartReadyAt === null || $room.state?.forceStartReadyAt === undefined) {
+      return; // nothing armed, no ticker needed
+    }
+    const id = setInterval(() => (nowMs = Date.now()), 250);
+    return () => clearInterval(id);
+  });
+
+  const forceStartArmedAt = $derived($room.state?.forceStartReadyAt ?? null);
+  const forceStartMs = $derived(
+    forceStartArmedAt === null ? 0 : Math.max(0, forceStartArmedAt - nowMs),
+  );
+  // The total wait kept client-side so we can draw the progress bar
+  // without piping it through state. Matches FORCE_START_WAIT_MS on
+  // the server; changing either without the other breaks the visual.
+  const FORCE_START_TOTAL_MS = 15_000;
+  const forceStartProgress = $derived(
+    forceStartArmedAt === null
+      ? 0
+      : Math.min(1, 1 - forceStartMs / FORCE_START_TOTAL_MS),
+  );
+  const canForceStart = $derived(
+    forceStartArmedAt !== null && forceStartMs === 0 && !allReady,
+  );
 </script>
 
 {#if $room.state}
@@ -167,17 +211,17 @@
       </div>
     {/if}
 
-    <div class="center-slot">
-      {#if countingDown}
-        <Countdown startsAt={s.startsAt ?? 0} />
-      {:else if s.phase === "lobby" && !$isHost && !meReady && allReady}
-        <span class="waiting-host">waiting for host to start the round</span>
-      {:else if s.phase === "lobby" && !allReady && !$isHost && !meReady}
-        <span class="waiting-host">ready up to start the round</span>
-      {:else if s.phase === "playing"}
-        <Timer endsAt={s.endsAt} />
-      {/if}
-    </div>
+    {#if centerSlotUsed}
+      <div class="center-slot">
+        {#if showWaitingHostStart}
+          <span class="waiting-host">waiting for host to start the round</span>
+        {:else if showReadyUp}
+          <span class="waiting-host">ready up to start the round</span>
+        {:else if showTimer}
+          <Timer endsAt={s.endsAt} />
+        {/if}
+      </div>
+    {/if}
 
     {#if s.phase === "lobby"}
       <Tutorial variant="room" />
@@ -216,21 +260,70 @@
           >{meReady ? "not ready" : "i'm ready"}</button>
         {/if}
         {#if $isHost}
+          {@const forceArmed = forceStartArmedAt !== null}
+          {@const waitingSecs = Math.max(1, Math.ceil(forceStartMs / 1000))}
           {@const label = countingDown
             ? "starting…"
             : allReady
               ? "start round"
-              : "waiting for players"}
+              : canForceStart
+                ? "start anyway"
+                : forceArmed
+                  ? `start anyway in ${waitingSecs}s`
+                  : "waiting for players"}
+          {@const onHostStart = () => {
+            // 1. Everyone ready → normal start (green happy path).
+            // 2. Not everyone ready, nothing armed → first press
+            //    arms the wait window on the server. Idempotent
+            //    server-side.
+            // 3. Wait window elapsed → force-start.
+            if (allReady) {
+              send({ t: "start" });
+            } else if (canForceStart) {
+              send({ t: "start", force: true });
+            } else {
+              send({ t: "start" });
+            }
+          }}
+          {@const isDisabled =
+            countingDown ||
+            // Armed but still waiting the 15s out: button is
+            // showing the countdown, can't be clicked again.
+            (forceArmed && !canForceStart) ||
+            // Edge case: no non-host players yet, host hasn't
+            // readied anyone. allReady is true (vacuously), so
+            // this branch is unreachable — kept for clarity.
+            false}
           <button
             type="button"
             class="btn primary start-round-btn"
             class:ready={allReady && !countingDown}
-            disabled={!allReady || countingDown}
-            title={allReady ? "" : "all players must be ready"}
-            onclick={() => send({ t: "start" })}
+            class:force-wait={forceArmed && !canForceStart}
+            class:force-ready={canForceStart}
+            disabled={isDisabled}
+            title={allReady
+              ? ""
+              : canForceStart
+                ? "start the round without waiting"
+                : forceArmed
+                  ? "starting anyway soon — click to override"
+                  : "click once to wait for players"}
+            onclick={onHostStart}
+            style={forceArmed
+              ? `--force-progress: ${(forceStartProgress * 100).toFixed(1)}%`
+              : undefined}
           >{label}</button>
         {/if}
       </div>
+      {#if countingDown}
+        <!-- Pre-round countdown lives under the action buttons so the
+             host sees it directly below "starting…" and every player
+             sees it under their ready button. Leaves the center slot
+             free for status prose. -->
+        <div class="pre-round-countdown">
+          <Countdown startsAt={s.startsAt ?? 0} />
+        </div>
+      {/if}
     {/if}
 
     {#if s.phase === "playing"}

@@ -50,6 +50,10 @@
         ".chip[data-word]",
       );
       if (!chip) return;
+      // Moving between sub-elements of the same chip (text node →
+      // <sup>) re-fires mouseover with the same closest chip. Skip
+      // those so the 250ms hover timer doesn't keep resetting.
+      if (activeChip === chip) return;
       clearHoverTimer();
       hoverTimer = setTimeout(() => showFor(chip), 250);
     };
@@ -59,6 +63,14 @@
         ".chip[data-word]",
       );
       if (!chip) return;
+      // Ignore chip-to-chip transitions AND sub-element hops within
+      // the same chip: they're not a true "leave", and clearing the
+      // timer here made the tooltip never open when the chip text
+      // spanned multiple sub-nodes (missed-words row was worst).
+      const next = e.relatedTarget instanceof Element
+        ? e.relatedTarget.closest<HTMLElement>(".chip[data-word]")
+        : null;
+      if (next) return;
       clearHoverTimer();
       if (!activeChip) return;
       if (activeChip === chip) {

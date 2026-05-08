@@ -85,10 +85,12 @@ function defaultState(overrides: SeedOptions = {}): RoomState {
     settings: {
       roundSeconds: overrides.roundSeconds ?? 180,
       size: overrides.size ?? 4,
+      private: false,
     },
     possibleCount: (overrides.possibleWords ?? DEFAULT_POSSIBLE_4X4).length,
     possibleWords: overrides.possibleWords ?? DEFAULT_POSSIBLE_4X4,
     lastRoundId: null,
+    forceStartReadyAt: null,
   };
 }
 

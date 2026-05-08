@@ -240,7 +240,9 @@ export function attachNetcode(
           break;
         }
         case "start": {
-          if (ctx.room && ctx.playerId) startRound(ctx.room, ctx.playerId);
+          if (ctx.room && ctx.playerId) {
+            startRound(ctx.room, ctx.playerId, msg.force === true);
+          }
           break;
         }
         case "lobby": {

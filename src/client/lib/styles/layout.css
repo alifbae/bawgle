@@ -42,15 +42,38 @@ main {
   transition: opacity 120ms ease;
 }
 
+/* Inline room tag appended to the brand: `bawgle (room: CODE)`.
+   Much smaller than the wordmark so it reads as caption text — the
+   code itself is still the visual anchor via accent colour and
+   mono styling. */
+.brand-room {
+  margin-left: 0.5em;
+  font-size: 0.42em;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--c-muted);
+  text-transform: lowercase;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.brand-room-code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--c-accent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  user-select: text;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-/* Compact room code visible in the topbar once a room is joined.
-   Sits between the brand and the controls. Stays readable on mobile
-   where the lobby's larger .room-code-display is hidden. */
+/* Compact pill style retained in case something in /admin or an
+   external caller still targets it — harmless if unused. */
 .topbar-code {
   font-family: var(--font-mono);
   font-size: 0.95rem;
@@ -278,6 +301,16 @@ main {
   padding: 0.25rem 0 0.5rem;
 }
 
+/* Pre-round countdown sits directly below the start/ready button so
+   the "round starting in Ns…" text is tied to the action the host
+   or player just took. Centered, muted italic — the center-slot
+   above stays free for status prose like "waiting for host". */
+.pre-round-countdown {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 0.25rem;
+}
+
 .start-round-btn {
   font-size: 1rem;
   padding: 0.8rem 1.6rem;
@@ -287,6 +320,10 @@ main {
     border-color 150ms ease,
     color 150ms ease,
     opacity 150ms ease;
+  /* Needed so the force-wait progress stripe (absolute ::after) sits
+     on top of the button's background without overflowing. */
+  position: relative;
+  overflow: hidden;
 }
 
 /* Disabled while waiting for players: neutral grey that reads as inactive
@@ -306,6 +343,42 @@ main {
   background: var(--c-good);
   border-color: var(--c-good);
   color: var(--c-bg);
+}
+
+/* Armed but still waiting out the force-start window. Stays visually
+   "disabled" (muted grey) but draws a filling stripe along the bottom
+   edge driven by --force-progress: N%. Viewers see the host is
+   deliberately pausing for late players, not frozen. */
+.start-round-btn.force-wait {
+  cursor: default;
+}
+
+.start-round-btn.force-wait::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: var(--force-progress, 0%);
+  background: var(--c-accent);
+  /* Update smoothly between the 250ms ticks so the bar looks
+     continuous rather than stepped. */
+  transition: width 240ms linear;
+}
+
+/* Wait elapsed — the button re-enables as "start anyway" in accent
+   colour. Distinct from the green "start round" so the host knows
+   this click overrides the normal contract. */
+.start-round-btn.force-ready {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--c-bg);
+  cursor: pointer;
+  opacity: 1;
+}
+
+html[data-mode="light"] .start-round-btn.force-ready {
+  color: #ffffff;
 }
 
 .center-slot .timer {

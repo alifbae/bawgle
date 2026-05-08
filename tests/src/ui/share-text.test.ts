@@ -23,10 +23,11 @@ function mkState(overrides: Partial<RoomState> = {}): RoomState {
     startsAt: null,
     players: [],
     hostId: null,
-    settings: { roundSeconds: 180, size: 4 },
+    settings: { roundSeconds: 180, size: 4, private: false },
     possibleCount: 0,
     possibleWords: [],
     lastRoundId: null,
+    forceStartReadyAt: null,
     ...overrides,
   };
 }

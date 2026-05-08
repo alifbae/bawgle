@@ -1,26 +1,23 @@
 <!--
-  Topbar: brand, room-code pill, mute button, theme cycler. Reads the
-  room code + audio state from stores so every page (app, result,
-  404) shares identical chrome.
+  Topbar: brand with optional inline room tag, mute button, theme
+  cycler. Brand + room stay left-anchored; controls stay right-
+  anchored. The room tag reads `(room: CODE)` and only renders when
+  the player has joined a room, matching the URL convention.
 -->
 <script lang="ts">
   import { room } from "../stores/room.ts";
-  import { themeKey, themeName, cycleTheme } from "../stores/theme.ts";
   import { audioEnabled, toggleAudio } from "../stores/audio.ts";
+  import { themeKey, themeName, cycleTheme } from "../stores/theme.ts";
 </script>
 
 <header class="topbar">
-  <a href="./" class="brand-link"><h1 class="brand">bawgle</h1></a>
-
-  {#if $room.state?.code}
-    <span
-      class="topbar-code"
-      aria-label="Current room code"
-      title="Current room code"
-    >
-      {$room.state.code}
-    </span>
-  {/if}
+  <a href="./" class="brand-link">
+    <h1 class="brand">
+      bawgle{#if $room.state?.code}<span class="brand-room">
+        (room: <span class="brand-room-code">{$room.state.code}</span>)
+      </span>{/if}
+    </h1>
+  </a>
 
   <div class="topbar-right">
     <button
@@ -70,14 +67,13 @@
     <button
       type="button"
       class="theme-btn"
-      aria-label="Cycle theme"
+      aria-label={`Cycle theme (current: ${themeName($themeKey)})`}
+      title={themeName($themeKey)}
       onclick={cycleTheme}
     >
       <span class="theme-swatch" aria-hidden="true"></span>
-      <span class="theme-name">{themeName($themeKey)}</span>
     </button>
   </div>
 </header>
 
-<!-- Topbar styles live in the global stylesheet (layout.css) so they
-     apply consistently across pages without redefining here. -->
+<!-- Topbar styles live in the global stylesheet (layout.css). -->

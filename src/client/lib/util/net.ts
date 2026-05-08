@@ -6,12 +6,19 @@ import { getClientId, setClientId } from "./client-id.ts";
 import { room } from "../stores/room.ts";
 import { flashFeedback } from "../stores/feedback.ts";
 import { submit as fbSubmit, reject as fbReject } from "./audio.ts";
-import type { ClientMsg, ServerMsg } from "../../../shared/types.ts";
+import type { ClientMsg, RoomSettings, ServerMsg } from "../../../shared/types.ts";
 
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 15000];
 
 let ws: WebSocket | null = null;
 let joinPayload: { code: string; name: string } | null = null;
+// Settings the caller asked us to apply right after the first join
+// (host-side only — "make this room private from the start" style
+// knobs). We only ship these once on the first successful join; a
+// subsequent reconnect uses whatever settings the room has accrued
+// by then, so we don't clobber live state on a transient socket drop.
+let initialSettings: Partial<RoomSettings> | null = null;
+let initialSettingsSent = false;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
 let intentionalClose = false;
@@ -45,6 +52,14 @@ function handleServerMessage(msg: ServerMsg): void {
         setClientId(msg.state.code, msg.clientId);
       }
       room.apply({ meId: msg.you, state: msg.state });
+      // First successful join for this session — ship any host-side
+      // initial settings (e.g. "private") now that the server has a
+      // room to attach them to. Subsequent reconnects skip this so
+      // we don't overwrite anything that changed mid-session.
+      if (initialSettings && !initialSettingsSent) {
+        initialSettingsSent = true;
+        send({ t: "settings", settings: initialSettings });
+      }
       break;
     case "state":
       room.apply({ state: msg.state });
@@ -102,8 +117,13 @@ function openSocket(): void {
   });
 }
 
-export function connectAndJoin({ code, name }: { code: string; name: string }): void {
+export function connectAndJoin(
+  { code, name }: { code: string; name: string },
+  opts: { initialSettings?: Partial<RoomSettings> } = {},
+): void {
   joinPayload = { code, name };
+  initialSettings = opts.initialSettings ?? null;
+  initialSettingsSent = false;
   intentionalClose = false;
   reconnectAttempt = 0;
   clearReconnect();
@@ -130,6 +150,8 @@ export function send(msg: ClientMsg): void {
 export function disconnect(): void {
   intentionalClose = true;
   joinPayload = null;
+  initialSettings = null;
+  initialSettingsSent = false;
   clearReconnect();
   reconnectAttempt = 0;
   if (ws) {

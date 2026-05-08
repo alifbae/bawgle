@@ -39,6 +39,8 @@ export type EventType =
   | "round_start"
   | "round_end"
   | "room_purged"
+  | "force_start_armed"
+  | "force_start_used"
   // Abuse / safety
   | "rate_limit_hit"
   | "conn_cap_hit"

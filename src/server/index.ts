@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, extname } from "node:path";
 import {
   restoreRooms,
+  roomsSnapshot,
   startRoomSweeper,
   fetchLatestRoundForRoom,
   fetchRoundById,
@@ -155,6 +156,36 @@ app.get("/api/room/:code/round", (c) => {
   const phase = getRoomPhase(code);
   if (phase === null) return c.json({ status: "not_found" }, 404);
   return c.json({ status: "in_progress", phase }, 200);
+});
+
+// Public list of joinable rooms, shown in the Lobby's Join tab so
+// players can see what's live without typing a code blind. We return
+// only what the client needs to render a pill and never leak player
+// names beyond the host's (which is the normal social cue for "do I
+// want to join this one?"). Private rooms are filtered out entirely;
+// joining them still works if you know the code.
+app.get("/api/rooms/public", (c) => {
+  const all = roomsSnapshot();
+  const rooms = all
+    // Results-phase rooms aren't joinable in any useful way (they
+    // snap back to lobby on the host's click), and empty rooms are
+    // just noise. Keep lobby/playing with at least one live socket.
+    // Private rooms are deliberately hidden from the list.
+    .filter(
+      (r) =>
+        r.phase !== "results" &&
+        r.liveConnections > 0 &&
+        !r.private,
+    )
+    .map((r) => ({
+      code: r.code,
+      phase: r.phase,
+      size: r.size,
+      playerCount: r.connectedCount,
+      endsAt: r.endsAt,
+      hostName: r.hostName,
+    }));
+  return c.json({ rooms });
 });
 
 const MIME: Record<string, string> = {

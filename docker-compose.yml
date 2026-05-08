@@ -16,6 +16,9 @@ services:
     environment:
       - TZ=America/Toronto
       - BAWGLE_TRUST_PROXY=1
+      - BAWGLE_ADMIN_USER=${BAWGLE_ADMIN_USER}
+      - BAWGLE_ADMIN_PASS=${BAWGLE_ADMIN_PASS}
+      - BAWGLE_ALLOWED_ORIGINS=${BAWGLE_ALLOWED_ORIGINS}
     volumes:
       - ./data:/data
     networks:

@@ -9,6 +9,31 @@
   color: var(--c-muted);
 }
 
+/* Error state: red outline on every input inside and a small
+   message below the field. Dropped as soon as the user starts
+   typing (the JS clears nameError on input). Border beats the
+   default focus colour via specificity + box-shadow so focusing
+   the field doesn't erase the warning. */
+.field.has-error input {
+  border-color: var(--c-bad);
+  box-shadow: 0 0 0 1px var(--c-bad);
+}
+
+.field.has-error input:focus {
+  border-color: var(--c-bad);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-bad) 55%, transparent);
+}
+
+.field.has-error label {
+  color: var(--c-bad);
+}
+
+.field-error {
+  color: var(--c-bad);
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
 input[type="text"],
 input:not([type]) {
   font-family: var(--font-mono);

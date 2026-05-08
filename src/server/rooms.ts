@@ -146,6 +146,7 @@ function getOrCreateRoom(code: string): Room | null {
         possibleCount: 0,
         possibleWords: [],
         lastRoundId: null,
+        forceStartReadyAt: null,
       },
       conns: new Map(),
       timer: null,
@@ -331,9 +332,15 @@ export function updateSettings(
       (SETTINGS_LIMITS.sizes as readonly number[]).includes(next.size)
         ? (next.size as RoomSettings["size"])
         : cur.size,
+    private:
+      typeof next.private === "boolean" ? next.private : cur.private,
   };
 
-  if (merged.roundSeconds === cur.roundSeconds && merged.size === cur.size) {
+  if (
+    merged.roundSeconds === cur.roundSeconds &&
+    merged.size === cur.size &&
+    merged.private === cur.private
+  ) {
     return;
   }
   room.state.settings = merged;
@@ -350,19 +357,67 @@ function clamp(n: number, min: number, max: number) {
 // it doesn't drag.
 const COUNTDOWN_MS = 5_000;
 
-export function startRound(room: Room, requesterId?: string) {
+/**
+ * How long the host has to wait between pressing "start round" while
+ * some players aren't ready and being allowed to force-start anyway.
+ *
+ * Gives AFK-but-connected players a fair window to ready up and keeps
+ * host overrides from feeling rude. Short enough (15s) that a full
+ * lobby with one lagging player isn't hostage to them.
+ */
+const FORCE_START_WAIT_MS = 15_000;
+
+export function startRound(
+  room: Room,
+  requesterId?: string,
+  force: boolean = false,
+) {
   if (room.state.phase === "playing") return;
   if (requesterId && requesterId !== room.state.hostId) return;
   // Host pressing "start" again while the countdown is already running
   // is a no-op rather than a reset, to keep remote players in sync.
   if (room.state.startsAt !== null) return;
 
-  // Everyone who's connected (except the host) must be ready. The host
-  // clicking "start" implies readiness.
   const connected = room.state.players.filter((p) => p.connected);
   if (connected.length === 0) return;
   const others = connected.filter((p) => p.id !== room.state.hostId);
-  if (others.some((p) => !p.ready)) return;
+  const allReady = others.every((p) => p.ready);
+
+  if (!allReady) {
+    // Not everyone's ready. Two paths:
+    //   1. Arm a grace window on the first press so players can
+    //      catch up. Broadcast the deadline so everyone sees a
+    //      matching progress stripe under the host's button.
+    //   2. After the window has elapsed, accept a `force: true`
+    //      press to start anyway.
+    if (!force) {
+      if (room.state.forceStartReadyAt === null) {
+        room.state.forceStartReadyAt = Date.now() + FORCE_START_WAIT_MS;
+        emitState(room);
+        persist(room);
+        recordEvent("force_start_armed", {
+          code: room.state.code,
+          waitMs: FORCE_START_WAIT_MS,
+        });
+      }
+      return;
+    }
+    // force === true, but only honour it after the wait elapsed.
+    const armedAt = room.state.forceStartReadyAt;
+    if (armedAt === null || Date.now() < armedAt) return;
+    recordEvent("force_start_used", {
+      code: room.state.code,
+      unreadyCount: others.filter((p) => !p.ready).length,
+    });
+    // Auto-ready everyone who was connected-but-unready so they join
+    // the round cleanly rather than sitting on a stale "ready up"
+    // screen while the others play.
+    for (const p of others) if (!p.ready) p.ready = true;
+  }
+
+  // Override resolved (either naturally by all-ready or via force) —
+  // clear the armed marker before entering the countdown.
+  room.state.forceStartReadyAt = null;
 
   // Enter the countdown. Actual round setup (board roll, solver run)
   // is deferred to the timer so `startsAt` is the only mutation every
@@ -470,6 +525,18 @@ export function setReady(room: Room, playerId: string, ready: boolean) {
   if (!player) return;
   if (player.ready === ready) return;
   player.ready = ready;
+  // If a pending force-start is armed, and this flip makes everyone
+  // ready, drop the override marker — the host's next "start" can
+  // take the normal happy path. If someone unreadies instead, leave
+  // the marker alone; the host's timer continues counting down.
+  if (room.state.forceStartReadyAt !== null) {
+    const others = room.state.players
+      .filter((p) => p.connected)
+      .filter((p) => p.id !== room.state.hostId);
+    if (others.every((p) => p.ready)) {
+      room.state.forceStartReadyAt = null;
+    }
+  }
   emitState(room);
   persist(room);
 }
@@ -488,6 +555,7 @@ export function returnToLobby(room: Room, requesterId?: string) {
   room.state.startsAt = null;
   room.state.possibleWords = [];
   room.state.possibleCount = 0;
+  room.state.forceStartReadyAt = null;
   for (const p of room.state.players) {
     p.score = 0;
     p.words = [];
@@ -570,6 +638,10 @@ export function restoreRooms(): void {
         // A pending countdown is tied to a live timer; discard it on
         // restart rather than rescheduling.
         startsAt: null,
+        // Same for the force-start window — the wait timer is a
+        // transient bit of coordination state, not something to
+        // resurrect across a restart.
+        forceStartReadyAt: null,
       },
       conns: new Map(),
       timer: null,
@@ -723,6 +795,9 @@ export interface RoomSnapshot {
   endsAt: number | null;
   possibleCount: number;
   liveConnections: number;
+  /** True when the host marked the room private. The public rooms
+   *  endpoint hides these; the admin dashboard still shows them. */
+  private: boolean;
 }
 
 export function roomsSnapshot(): RoomSnapshot[] {
@@ -740,6 +815,7 @@ export function roomsSnapshot(): RoomSnapshot[] {
       endsAt: room.state.endsAt,
       possibleCount: room.state.possibleCount,
       liveConnections: room.conns.size,
+      private: room.state.settings.private === true,
     });
   }
   // Sort: playing rooms first, then by player count desc, then code.

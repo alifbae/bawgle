@@ -254,6 +254,8 @@ export function loadAllRooms(): PersistedRoom[] {
         possibleWords: JSON.parse(r.possible_words_json),
         // Restored via rooms.restoreRooms() from the latest round row.
         lastRoundId: null,
+        // Transient lobby coordination; not persisted.
+        forceStartReadyAt: null,
       },
       solved: JSON.parse(r.solved_json),
     };

@@ -78,21 +78,45 @@
       "[data-word]",
     );
     if (!chip) return;
+    // Moving from one chip to ANY other chip shouldn't clear the
+    // highlight — `pointerover` on the new chip will overwrite
+    // hoverWord in the next tick. Only clearing avoids a visible
+    // flicker where hoverWord briefly goes null and the board trail
+    // disappears, which was very obvious for the densely-packed
+    // missed-words row.
     const next = e.relatedTarget instanceof Element
       ? e.relatedTarget.closest<HTMLElement>("[data-word]")
       : null;
-    if (next && next === chip) return;
+    if (next) return;
     hoverWord = null;
+  }
+  function onRootPointerDown(e: PointerEvent): void {
+    // Pin on pointerdown so a tap on mobile lights the board the
+    // instant the finger lands, not after the browser has decided to
+    // synthesize a click. The previous click-based path flickered on
+    // touch: pointerout (release) cleared hoverWord before click
+    // could set pinnedWord, leaving the preview off until click
+    // finally fired. For spans with role="button", Safari sometimes
+    // suppresses the click entirely when there's any micro-movement
+    // during the tap.
+    const chip = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+      "[data-word]",
+    );
+    if (chip) {
+      pinnedWord = chip.getAttribute("data-word");
+    }
   }
   function onRootClick(e: MouseEvent): void {
     const chip = (e.target as HTMLElement | null)?.closest<HTMLElement>(
       "[data-word]",
     );
     if (chip) {
-      pinnedWord = chip.getAttribute("data-word");
+      // Already pinned on pointerdown. Nothing to do; let the event
+      // continue so DefinitionTooltip's delegated click toggle fires.
       return;
     }
-    // Click somewhere non-chip — clear pin (but not hover).
+    // Click somewhere non-chip — clear pin. iOS suppresses click on
+    // scroll/drag, so this doesn't fire when the user is just panning.
     pinnedWord = null;
   }
 
@@ -124,6 +148,7 @@
   aria-label="Results"
   onpointerover={onRootPointerOver}
   onpointerout={onRootPointerOut}
+  onpointerdown={onRootPointerDown}
   onclick={onRootClick}
   onkeydown={(e) => {
     if (e.key === "Escape") pinnedWord = null;

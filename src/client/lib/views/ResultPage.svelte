@@ -119,6 +119,7 @@
       possibleCount: r.possibleWords.length,
       possibleWords: r.possibleWords,
       lastRoundId: r.id,
+      forceStartReadyAt: null,
     };
   }
 
