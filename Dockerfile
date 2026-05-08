@@ -3,7 +3,7 @@
 # ---------- Build stage ----------
 # Alpine + native deps for better-sqlite3 (prebuilds cover most arches but
 # having the toolchain ensures the image builds anywhere).
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 RUN corepack enable
@@ -18,7 +18,7 @@ RUN pnpm build
 RUN pnpm prune --prod
 
 # ---------- Runtime ----------
-FROM node:20-alpine
+FROM node:26-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
