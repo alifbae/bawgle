@@ -1,0 +1,138 @@
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-label {
+  flex-shrink: 0;
+  width: 3rem;
+  font-size: 0.78rem;
+  color: var(--c-muted);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.settings-value {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--c-accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 3rem;
+  text-align: right;
+}
+
+/* Segmented button group */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  flex: 1;
+}
+
+.seg-btn {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  color: var(--c-muted);
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 1px);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.seg-btn:hover {
+  color: var(--c-fg);
+}
+
+.seg-btn[aria-checked="true"] {
+  background: var(--c-accent);
+  color: var(--c-bg);
+}
+
+/* Range slider */
+.settings-row input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  min-width: 0;
+}
+
+.settings-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--c-border);
+  border-radius: 2px;
+}
+
+.settings-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--c-border);
+  border-radius: 2px;
+}
+
+.settings-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--c-accent);
+  border: 0;
+  cursor: pointer;
+}
+
+.settings-row input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--c-accent);
+  border: 0;
+  cursor: pointer;
+}
+
+/* Private toggle row: checkbox at the left edge in place of a slider,
+   then a muted hint where the time/value usually lives. Uses the
+   same row rhythm as the other settings so it doesn't feel tacked on. */
+.settings-row-toggle {
+  gap: 0.75rem;
+}
+
+.settings-checkbox {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--c-accent);
+  cursor: pointer;
+  /* Eat the flex space the slider would have used so the hint text
+     keeps the same right-edge alignment as the round value. */
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.settings-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  color: var(--c-muted);
+  font-family: var(--font-sans);
+  font-weight: 400;
+}

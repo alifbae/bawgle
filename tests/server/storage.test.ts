@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { RoomState } from "../../shared/types.ts";
-import { DEFAULT_SETTINGS } from "../../shared/types.ts";
+import type { RoomState } from "../../src/shared/types.ts";
+import { DEFAULT_SETTINGS } from "../../src/shared/types.ts";
 import {
   closeStorage,
   deleteRoom,
@@ -11,7 +11,7 @@ import {
   initStorage,
   loadAllRooms,
   saveRoom,
-} from "../../server/storage.ts";
+} from "../../src/server/storage.ts";
 
 // Storage is process-global; use a fresh tmp DB per test so assertions
 // don't bleed across cases.
@@ -29,6 +29,7 @@ function makeState(code: string, overrides: Partial<RoomState> = {}): RoomState 
     possibleCount: 0,
     possibleWords: [],
     lastRoundId: null,
+    forceStartReadyAt: null,
     ...overrides,
   };
 }

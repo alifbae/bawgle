@@ -35,7 +35,7 @@ async function loadAuth(env: HeaderBag = {}) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
-  return import("../../server/admin/auth.ts");
+  return import("../../src/admin-panel/auth.ts");
 }
 
 describe("admin auth", () => {

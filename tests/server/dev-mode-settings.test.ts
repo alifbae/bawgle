@@ -16,10 +16,10 @@ async function freshRooms(env: string | undefined) {
   } else {
     process.env.BAWGLE_ENVIRONMENT = env;
   }
-  const rooms = await import("../../server/rooms.ts");
-  const storage = await import("../../server/storage.ts");
-  const metrics = await import("../../server/metrics.ts");
-  const dictionary = await import("../../server/dictionary.ts");
+  const rooms = await import("../../src/server/rooms.ts");
+  const storage = await import("../../src/server/storage.ts");
+  const metrics = await import("../../src/server/metrics.ts");
+  const dictionary = await import("../../src/server/dictionary.ts");
   metrics.configureLogging({ dir: null });
   return { rooms, storage, dictionary };
 }

@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-import type { ServerMsg } from "../../shared/types.ts";
+import type { ServerMsg } from "../../src/shared/types.ts";
 
 // Capture the real timer primitives at module load, BEFORE any test
 // installs vi.useFakeTimers. The test helpers below (TestClient.next,
@@ -35,10 +35,10 @@ async function freshServer(): Promise<{
 }> {
   vi.resetModules();
   const [netcode, storage, metrics, dictionary] = await Promise.all([
-    import("../../server/netcode.ts"),
-    import("../../server/storage.ts"),
-    import("../../server/metrics.ts"),
-    import("../../server/dictionary.ts"),
+    import("../../src/server/netcode.ts"),
+    import("../../src/server/storage.ts"),
+    import("../../src/server/metrics.ts"),
+    import("../../src/server/dictionary.ts"),
   ]);
 
   const tmp = mkdtempSync(join(tmpdir(), "bawgle-mp-"));
@@ -461,7 +461,7 @@ describe("multiplayer — state broadcasts after play-again", () => {
     const settleIO = () =>
       new Promise<void>((resolve) => realSetTimeout(resolve, 30));
     try {
-      const rooms = await import("../../server/rooms.ts");
+      const rooms = await import("../../src/server/rooms.ts");
 
       const host = await joinRoom(srv.url, "RTL2", "HOST", "c-h");
       const a = await joinRoom(srv.url, "RTL2", "PONE", "c-a");

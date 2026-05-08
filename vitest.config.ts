@@ -24,13 +24,13 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["server/**/*.ts", "shared/**/*.ts", "src/**/*.ts"],
+      include: ["src/**/*.ts"],
       exclude: [
         "tests/**",
         "**/*.test.ts",
-        "server/admin/assets/**",
-        "server/admin/build.ts",
-        "src/main.ts", // glue, exercised by e2e not unit
+        "src/admin-panel/assets/**",
+        "src/admin-panel/build.ts",
+        "src/client/main.ts", // glue, exercised by e2e not unit
       ],
     },
   },

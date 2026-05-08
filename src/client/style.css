@@ -1,0 +1,14 @@
+/* Entry CSS: imports partial stylesheets split by concern.
+   Each partial targets one surface (board, lobby, tooltip, etc.) so
+   we can find rules by intent rather than by element. */
+@import "./lib/styles/base.css";
+@import "./lib/styles/layout.css";
+@import "./lib/styles/forms.css";
+@import "./lib/styles/lobby.css";
+@import "./lib/styles/settings.css";
+@import "./lib/styles/players.css";
+@import "./lib/styles/board.css";
+@import "./lib/styles/word-bar.css";
+@import "./lib/styles/tutorial.css";
+@import "./lib/styles/results.css";
+@import "./lib/styles/tooltip.css";

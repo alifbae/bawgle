@@ -14,7 +14,7 @@ import {
   initStorage,
   insertRound,
   pruneOldRounds,
-} from "../../server/storage.ts";
+} from "../../src/server/storage.ts";
 
 describe("rounds storage", () => {
   let tmp: string;

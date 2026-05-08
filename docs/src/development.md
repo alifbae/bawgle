@@ -4,9 +4,9 @@ Bawgle is a small TypeScript monorepo with three moving parts:
 
 | Slice | Runs as | Entry point | What it does |
 | --- | --- | --- | --- |
-| Client SPA | Vite (port 5175 in dev) | `src/main.ts` | Boggle UI, lobby, board input, results |
-| Server | `tsx watch` (port 3001) | `server/index.ts` | HTTP API, WebSocket gameplay, SQLite persistence |
-| Admin bundle | esbuild watcher | `server/admin/assets/app.ts` → `.js` | Admin dashboard front-end |
+| Client SPA | Vite (port 5175 in dev) | `src/client/main.ts` | Svelte 5 UI — lobby, board input, results |
+| Server | `tsx watch` (port 3001) | `src/server/index.ts` | HTTP API, WebSocket gameplay, SQLite persistence |
+| Admin bundle | esbuild watcher | `src/admin-panel/assets/app.ts` → `.js` | Admin dashboard front-end |
 
 `pnpm dev` runs all three concurrently with `concurrently`.
 
@@ -64,27 +64,40 @@ noteworthy ones:
 
 ## Repo layout
 
+Everything source-controlled lives under `src/`, split by deployment
+target.
+
 ```
-server/          Node server (Hono + ws + better-sqlite3)
-  admin/         Admin dashboard: auth, routes, static assets
-  dictionary.ts  Trie-backed word lookup + Boggle solver
-  metrics.ts     Counters + event ring buffer + JSONL persistence
-  netcode.ts     WebSocket upgrade, origin check, per-IP caps, rate limiter
-  rooms.ts       Room lifecycle, rounds, host transfer, ready-up
-  storage.ts     SQLite schema, room / round persistence
-  index.ts       Boot, route mount, static SPA fallback
+src/
+  server/          Node server (Hono + ws + better-sqlite3)
+    index.ts       Boot, route mount, static SPA fallback
+    rooms.ts       Room lifecycle, rounds, host transfer, ready-up
+    netcode.ts     WebSocket upgrade, origin check, per-IP caps, rate limiter
+    storage.ts     SQLite schema, room / round persistence
+    dictionary.ts  Trie-backed word lookup + Boggle solver
+    metrics.ts     Counters + event ring buffer + JSONL persistence
 
-shared/          Code used by both server and client
-  board.ts       Dice sets, rollBoard, wordPathExists
-  types.ts       RoomState, ClientMsg/ServerMsg, scoring
+  admin-panel/     Admin dashboard (host + plain-DOM client)
+    index.ts       Hono routes mounted by the server
+    auth.ts        HTTP Basic auth + per-IP fail throttle
+    build.ts       esbuild wrapper: assets/app.ts → app.js
+    assets/        Static HTML, CSS, compiled dashboard client
 
-src/             Vite SPA
-  main.ts        Route dispatch (/, /result, 404) + app wiring
-  net.ts         WebSocket with exponential-backoff reconnect
-  game/          Path store, input (pointer/keyboard), resolver
-  ui/            Lobby, board, timer, words, results, settings, ...
-  styles/        Split CSS by concern
-  util/          client-id, escape helpers
+  shared/          Code used by both server and client
+    board.ts       Dice sets, rollBoard, wordPathExists
+    types.ts       RoomState, ClientMsg/ServerMsg, scoring
+
+  client/          Svelte 5 SPA built with Vite
+    main.ts        Mounts App.svelte into <body>
+    App.svelte     Path-based router (/, /result, 404)
+    style.css      Entry CSS that imports lib/styles/*
+    dev-helpers.ts Dev-only window.bawgleDev helpers (tree-shaken in prod)
+    lib/
+      components/  Leaf components (Board, PlayerList, Timer, …)
+      views/       Top-level views (Room, ResultPage, NotFound)
+      stores/      Svelte stores (room, path, theme, audio, feedback)
+      util/        Net, input, resolver, themes, share, client-id, …
+      styles/      Split CSS partials imported from ../style.css
 
 data/
   dictionary/    words.txt, denylist.txt, definitions.json, inflections.json
@@ -92,7 +105,7 @@ data/
   boggle.db      SQLite DB (runtime-generated)
 
 scripts/         One-off tools (dictionary build, solver verify, probes)
-tests/           Vitest specs mirroring src/, server/, shared/
+tests/           Vitest specs mirroring src/ layout
 ```
 
 ## Testing
@@ -107,10 +120,10 @@ tests/           Vitest specs mirroring src/, server/, shared/
 
 A few patterns worth knowing:
 
-- `server/rooms.ts` exports `__beginRoundForTests` to skip the
+- `src/server/rooms.ts` exports `__beginRoundForTests` to skip the
   pre-round countdown from tests that predate it.
-- `server/admin/auth.ts` exports `__resetAdminThrottleForTests` so
-  the per-IP fail counter can be reset between cases.
+- `src/admin-panel/auth.ts` exports `__resetAdminThrottleForTests`
+  so the per-IP fail counter can be reset between cases.
 - Storage tests open SQLite in a tmp dir and call `initStorage` /
   `closeStorage` around each test.
 - `tests/server/netcode.test.ts` spins up the server on ephemeral
@@ -135,7 +148,7 @@ whole module is tree-shaken from production bundles.
 
 ## Admin bundle
 
-`server/admin/build.ts` is a small esbuild wrapper that compiles
-`server/admin/assets/app.ts` → `app.js`. In dev it runs with
+`src/admin-panel/build.ts` is a small esbuild wrapper that compiles
+`src/admin-panel/assets/app.ts` → `app.js`. In dev it runs with
 `--watch`; in CI it's invoked by `pnpm build:admin` before the Vite
 build so the published image ships a fresh bundle.

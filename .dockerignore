@@ -17,4 +17,4 @@ LICENSE
 .prettierrc*
 .eslintrc*
 .cache
-server/admin/assets/app.js
+src/admin-panel/assets/app.js

@@ -27,10 +27,10 @@ async function freshServer(
 }> {
   vi.resetModules();
   const [netcode, storage, metrics, dictionary] = await Promise.all([
-    import("../../server/netcode.ts"),
-    import("../../server/storage.ts"),
-    import("../../server/metrics.ts"),
-    import("../../server/dictionary.ts"),
+    import("../../src/server/netcode.ts"),
+    import("../../src/server/storage.ts"),
+    import("../../src/server/metrics.ts"),
+    import("../../src/server/dictionary.ts"),
   ]);
 
   const tmp = mkdtempSync(join(tmpdir(), "bawgle-net-"));

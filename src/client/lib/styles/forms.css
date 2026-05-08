@@ -1,0 +1,116 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field label {
+  font-size: 0.78rem;
+  color: var(--c-muted);
+}
+
+/* Error state: red outline on every input inside and a small
+   message below the field. Dropped as soon as the user starts
+   typing (the JS clears nameError on input). Border beats the
+   default focus colour via specificity + box-shadow so focusing
+   the field doesn't erase the warning. */
+.field.has-error input {
+  border-color: var(--c-bad);
+  box-shadow: 0 0 0 1px var(--c-bad);
+}
+
+.field.has-error input:focus {
+  border-color: var(--c-bad);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-bad) 55%, transparent);
+}
+
+.field.has-error label {
+  color: var(--c-bad);
+}
+
+.field-error {
+  color: var(--c-bad);
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+input[type="text"],
+input:not([type]) {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  background: var(--c-bg);
+  color: var(--c-fg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+input:focus {
+  border-color: var(--c-accent);
+}
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: transparent;
+  color: var(--c-fg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.btn:hover {
+  border-color: var(--c-fg);
+}
+
+.btn:active {
+  opacity: 0.85;
+}
+
+.btn.primary {
+  background: var(--c-accent);
+  color: var(--c-bg);
+  border-color: var(--c-accent);
+}
+
+.btn.primary:hover {
+  filter: brightness(1.05);
+}
+
+html[data-mode="light"] .btn.primary {
+  color: #ffffff;
+}
+
+.icon-btn {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: var(--c-bg);
+  color: var(--c-fg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+  font-variant-emoji: text;
+}
+
+.icon-btn:hover {
+  border-color: var(--c-fg);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}

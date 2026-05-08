@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync, rmSync, mkdirSync, readFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { isWord, loadDictionary, lookupDefinition, solveBoard } from "../../server/dictionary.ts";
+import { isWord, loadDictionary, lookupDefinition, solveBoard } from "../../src/server/dictionary.ts";
 
 // Dictionary module holds global state (word set + trie + defs + inflections).
 // We load a small fixture once and assert against it for the whole file.

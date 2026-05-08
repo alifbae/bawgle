@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 // Surface BAWGLE_ENVIRONMENT to the client bundle as a compile-time string.
 // `development` turns on window.bawgleDev helpers; anything else strips them.
@@ -6,6 +7,7 @@ const environment = process.env.BAWGLE_ENVIRONMENT || "production";
 
 export default defineConfig({
   base: "./",
+  plugins: [svelte()],
   define: {
     __BAWGLE_ENVIRONMENT__: JSON.stringify(environment),
   },

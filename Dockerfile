@@ -32,8 +32,9 @@ RUN apk add --no-cache tzdata
 # is already in node_modules from the build stage.
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/server ./server
-COPY --from=build /app/shared ./shared
+COPY --from=build /app/src/server ./src/server
+COPY --from=build /app/src/admin-panel ./src/admin-panel
+COPY --from=build /app/src/shared ./src/shared
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/data/dictionary ./data/dictionary
 
@@ -49,4 +50,4 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
   CMD wget -qO- http://127.0.0.1:3001/api/health || exit 1
 
-CMD ["node_modules/.bin/tsx", "server/index.ts"]
+CMD ["node_modules/.bin/tsx", "src/server/index.ts"]

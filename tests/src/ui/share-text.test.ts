@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildShareText } from "../../../src/ui/share-text.ts";
-import type { Player, RoomState } from "../../../shared/types.ts";
+import { buildShareText } from "../../../src/client/lib/util/share-text.ts";
+import type { Player, RoomState } from "../../../src/shared/types.ts";
 
 function mkPlayer(name: string, score: number): Player {
   return {
@@ -23,10 +23,11 @@ function mkState(overrides: Partial<RoomState> = {}): RoomState {
     startsAt: null,
     players: [],
     hostId: null,
-    settings: { roundSeconds: 180, size: 4 },
+    settings: { roundSeconds: 180, size: 4, private: false },
     possibleCount: 0,
     possibleWords: [],
     lastRoundId: null,
+    forceStartReadyAt: null,
     ...overrides,
   };
 }
