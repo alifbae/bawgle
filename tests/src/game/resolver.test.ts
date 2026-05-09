@@ -83,4 +83,59 @@ describe("findPathForWord", () => {
     expect(path!).toHaveLength(4);
     expect(qBoard[path![0]]).toBe("Qu");
   });
+
+  // ─── Determinism ─────────────────────────────────────────────
+  //
+  // Regression guard for the results-preview "cycling between two
+  // paths" bug: if a word can be traced multiple valid ways on the
+  // board, the resolver must pick the same one every time. Otherwise
+  // the preview board flips between paths on every chip hover.
+
+  describe("determinism", () => {
+    it("returns the same path on repeated calls for a word with multiple solutions", () => {
+      // "ee" exists at (0,2), (1,0) and many neighbouring pairs.
+      const multiBoard = [
+        "E", "E", "E", "E",
+        "E", "X", "Y", "E",
+        "E", "Z", "W", "E",
+        "E", "E", "E", "E",
+      ];
+      const first = findPathForWord(multiBoard, "ee");
+      expect(first).not.toBeNull();
+      for (let i = 0; i < 20; i++) {
+        expect(findPathForWord(multiBoard, "ee")).toEqual(first);
+      }
+    });
+
+    it("picks one deterministic path for an ambiguous longer word", () => {
+      // "ANNA" can be traced 0→1→5→4 or 0→4→5→1 etc.
+      const annaBoard = [
+        "A", "N", "X", "X",
+        "N", "A", "X", "X",
+        "X", "X", "X", "X",
+        "X", "X", "X", "X",
+      ];
+      const runs = Array.from({ length: 10 }, () =>
+        findPathForWord(annaBoard, "anna"),
+      );
+      expect(runs[0]).not.toBeNull();
+      for (const r of runs) expect(r).toEqual(runs[0]);
+    });
+
+    it("does not cycle even when preferPrefix is not given", () => {
+      // The ResultsPreview path is what the user sees — it calls
+      // findPathForWord with no prefer on every highlight. Two rapid
+      // calls must yield identical arrays (no cell/index perturbation).
+      const b = [
+        "C", "A", "T", "C",
+        "A", "T", "S", "A",
+        "T", "S", "C", "T",
+        "S", "C", "A", "T",
+      ];
+      const a = findPathForWord(b, "cats");
+      const b2 = findPathForWord(b, "cats");
+      expect(a).not.toBeNull();
+      expect(b2).toEqual(a);
+    });
+  });
 });

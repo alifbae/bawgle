@@ -60,9 +60,24 @@
     flush();
   }
 
+  // Live slider value that updates on every drag movement. Tracks
+  // the server-confirmed `settings.roundSeconds` by default; flips
+  // to a locally-tracked value while the user is dragging so the
+  // label reflects the current slider position in real time.
+  let dragValue = $state<number | null>(null);
+  const liveSeconds = $derived(dragValue ?? settings.roundSeconds);
+
   function onSliderInput(e: Event): void {
     const v = Number((e.currentTarget as HTMLInputElement).value);
+    dragValue = v;
     queue({ roundSeconds: v });
+  }
+
+  function onSliderChange(): void {
+    // On release: flush to the server, then drop the local override
+    // so subsequent server updates flow through.
+    flush();
+    dragValue = null;
   }
 
   function fmt(seconds: number): string {
@@ -88,7 +103,7 @@
     </div>
   </div>
   <div class="settings-row">
-    <label class="settings-label" for="round-slider">round</label>
+    <label class="settings-label" for="round-slider">duration</label>
     <input
       id="round-slider"
       type="range"
@@ -97,9 +112,9 @@
       {step}
       value={settings.roundSeconds}
       oninput={onSliderInput}
-      onchange={flush}
+      onchange={onSliderChange}
     />
-    <span class="settings-value">{fmt(settings.roundSeconds)}</span>
+    <span class="settings-value">{fmt(liveSeconds)}</span>
   </div>
   <div class="settings-row">
     <div class="settings-label">visibility</div>

@@ -12,6 +12,10 @@ export default defineConfig({
     __BAWGLE_ENVIRONMENT__: JSON.stringify(environment),
   },
   server: {
+    // Bind to 0.0.0.0 in dev so phones / tablets on the same LAN can
+    // hit the app at http://<dev-machine-ip>:5175. Vite prints both
+    // the local and network URLs on startup.
+    host: true,
     port: 5175,
     proxy: {
       "/ws": {

@@ -1,0 +1,50 @@
+// markdownlint config for docs/src. Tuned to the existing prose
+// style: 72-char body wrap, fenced code blocks, emoji-heavy headings
+// (material icons), and MkDocs front-matter on index.md.
+//
+// Run via `pnpm docs:lint` (also invoked by `pnpm docs:build`).
+{
+  "config": {
+    "default": true,
+
+    // Line length: docs wrap around 72 columns but occasional URLs
+    // and code examples blow past that. Disable hard wrap enforcement
+    // and rely on the existing style.
+    "MD013": false,
+
+    // Allow duplicate headings under different parents (e.g. repeated
+    // "Troubleshooting" sections).
+    "MD024": { "siblings_only": true },
+
+    // We intentionally mix ordered/unordered lists and nested
+    // sequences. Keep the default but allow lazy numbering.
+    "MD029": { "style": "one_or_ordered" },
+
+    // Material for MkDocs admonitions and grid cards use trailing
+    // punctuation/emphasis in headings (`__[Getting started]__`).
+    "MD036": false,
+    "MD026": false,
+
+    // Fenced code blocks without a language are fine for shell
+    // transcripts and diagrams.
+    "MD040": false,
+
+    // index.md uses HTML (<div class="grid cards">) for the landing
+    // page cards. MkDocs-Material requires it.
+    "MD033": false,
+
+    // First line doesn't need to be a top-level heading because
+    // index.md starts with YAML front-matter.
+    "MD041": false,
+
+    // Material for MkDocs grid cards use 3-space indent after the
+    // list marker (`-   :icon: ...`). Don't fight the theme.
+    "MD030": false,
+
+    // Mixed emphasis styles (`__title__` in cards, `**term**` in
+    // prose) coexist throughout. Skip strong-style enforcement.
+    "MD050": false
+  },
+  "globs": ["docs/src/**/*.md"],
+  "ignores": ["docs/site/**", "node_modules/**"]
+}

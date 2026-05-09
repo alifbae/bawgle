@@ -14,7 +14,15 @@
 
   let { path, board, onSubmit }: Props = $props();
 
-  const word = $derived(path.wordText(board));
+  // `$path` establishes the reactive dependency so the derived values
+  // recompute when the path changes. `path.wordText()` internally
+  // reads the store's current snapshot — without touching `$path`
+  // here, Svelte 5's `$derived` tracker would only see `board` and
+  // the buttons would stay hidden after the path fills up.
+  const word = $derived.by(() => {
+    void $path;
+    return path.wordText(board);
+  });
   const upper = $derived(word.toUpperCase());
   const hasWord = $derived(word.length > 0);
   const invalid = $derived(word.length > 0 && word.length < 3);

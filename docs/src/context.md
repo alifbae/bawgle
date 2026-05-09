@@ -1,8 +1,4 @@
-# Context for GPT agents
 
-A dense, structured summary of this codebase aimed at LLM coding
-assistants (GPT, Claude, etc.) that are being asked to change, extend,
-or debug it. Read this once before touching code.
 
 ## TL;DR
 
@@ -26,7 +22,7 @@ admin bundle, **Vitest** for tests.
                           │  HTTPS + WebSocket upgrade
                 ┌─────────▼─────────┐
                 │  Node process     │   Hono + ws
-                │  (src/server/index) │   port 3001
+                │(src/server/index) │   port 3001
                 └─────────┬─────────┘
         ┌─────────────────┼─────────────────┐
         │                 │                 │
@@ -192,6 +188,7 @@ as long as they have no live socket.
 ## Dictionary
 
 `data/dictionary/`:
+
 - `words.txt` — one word per line, lowercase, ≥3 chars, `[a-z]+` only
 - `denylist.txt` — words to strip; `scripts/apply-denylist.mjs`
   rewrites `words.txt`
