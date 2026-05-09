@@ -1,0 +1,36 @@
+# Words players expect to play that the build pipeline filters out.
+# Reasons vary: closed-class POS (conjunction, preposition, pronoun,
+# interjection, determiner), below the frequency-corpus cutoff, or
+# only defined via reference glosses. One lowercase word per line.
+# Comments start with #. Applied at build time by build-dictionary.ts
+# and on-demand by scripts/apply-denylist.ts (misnomer — it also
+# reconciles allowlist additions).
+
+# Closed-class words the POS filter rejects
+albeit
+amidst
+amongst
+anybody
+everybody
+herself
+himself
+huh
+into
+itself
+lest
+myself
+oneself
+ourselves
+themselves
+ugh
+unless
+until
+unto
+upon
+whether
+whichever
+whoever
+whom
+whomever
+whose
+yourself
