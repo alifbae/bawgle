@@ -47,7 +47,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-svelte": "^3.17.1",
     "globals": "^15.11.0",
-    "jsdom": "^25",
+    "jsdom": "^29",
     "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.3.3",
     "svelte": "^5.55.5",
