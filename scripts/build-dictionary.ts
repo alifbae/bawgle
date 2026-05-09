@@ -55,19 +55,39 @@ const ENABLE_URL =
 const ENABLE_CACHE = join(CACHE_DIR, "enable1.txt");
 
 const DENYLIST_PATH = join(DICT_DIR, "denylist.txt");
+const ALLOWLIST_PATH = join(DICT_DIR, "allowlist.txt");
 
 const OUT_WORDS = join(DICT_DIR, "words.txt");
 const OUT_DEFS = join(DICT_DIR, "definitions.json");
 const OUT_INFLECTIONS = join(DICT_DIR, "inflections.json");
 
 // POS categories we accept. A word needs ≥1 sense with one of these.
-const ACCEPTED_POS = new Set(["noun", "verb", "adj", "adjective", "adv", "adverb"]);
+// Closed-class (conjunction / preposition / determiner / pronoun /
+// interjection) is included so common everyday words like `lest`, `unto`,
+// `whom`, `ugh` qualify. The frequency-corpus gate still prunes the long
+// tail, so we're not flooding the dictionary.
+const ACCEPTED_POS = new Set([
+  "noun",
+  "verb",
+  "adjective",
+  "adverb",
+  "conjunction",
+  "preposition",
+  "determiner",
+  "pronoun",
+  "interjection",
+]);
 
 /** Normalize kaikki's POS strings to a consistent set. */
 function normalizePos(raw: string): string {
   const p = (raw || "").toLowerCase();
   if (p === "adj") return "adjective";
   if (p === "adv") return "adverb";
+  if (p === "conj") return "conjunction";
+  if (p === "prep") return "preposition";
+  if (p === "det" || p === "article") return "determiner";
+  if (p === "pron") return "pronoun";
+  if (p === "intj") return "interjection";
   if (p === "abbrev") return "abbreviation";
   if (p === "propn") return "proper noun";
   return p;
@@ -195,6 +215,25 @@ function loadDenylist(): Set<string> {
       .split(/\r?\n/)
       .map((l) => l.replace(/#.*$/, "").trim().toLowerCase())
       .filter((l) => /^[a-z]+$/.test(l))
+  );
+}
+
+/**
+ * Allowlist: words the player community expects to play that our POS /
+ * frequency filters would otherwise drop. Curated manually in
+ * `data/dictionary/allowlist.txt`. These get added to words.txt (unless
+ * also on the denylist). Definitions are optional — if we happen to have
+ * one from Wiktionary we keep it; otherwise the tooltip just says "no
+ * definition available". Safer to allow a playable word without a
+ * tooltip than to reject a word players know.
+ */
+function loadAllowlist(): Set<string> {
+  if (!existsSync(ALLOWLIST_PATH)) return new Set();
+  return new Set(
+    readFileSync(ALLOWLIST_PATH, "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.replace(/#.*$/, "").trim().toLowerCase())
+      .filter((l) => /^[a-z]+$/.test(l) && l.length >= 3)
   );
 }
 
@@ -332,6 +371,11 @@ async function main() {
     console.log(`[denylist] ${denylist.size} words will be excluded`);
   }
 
+  const allowlist = loadAllowlist();
+  if (allowlist.size) {
+    console.log(`[allowlist] ${allowlist.size} words will be force-included`);
+  }
+
   console.log("\n[wiktionary] parsing…");
   const { defs: wiktionary, inflections } = await readWiktionary(freq);
   console.log(
@@ -363,6 +407,21 @@ async function main() {
     if (!wiktionary.has(lemma)) continue;
     finalWords.add(word);
     if (!definitions[word]) inflOut[word] = lemma;
+  }
+
+  // Allowlist: curated words that the POS / frequency filters dropped.
+  // Wiktionary may still have a definition for them (common for closed-
+  // class words like `lest`, `unto`, `whom`), in which case we pick up
+  // the best content-POS gloss so tooltips still work.
+  let allowlistAdded = 0;
+  for (const word of allowlist) {
+    if (denylist.has(word)) continue;
+    if (finalWords.has(word)) continue;
+    finalWords.add(word);
+    allowlistAdded++;
+  }
+  if (allowlistAdded) {
+    console.log(`[allowlist] added ${allowlistAdded} words not covered by Wiktionary`);
   }
 
   const sortedWords = [...finalWords].sort();

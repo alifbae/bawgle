@@ -1,6 +1,21 @@
 // Quick smoke test: open a WS, join a room, wait for state, then close.
 // Verifies the server persists rooms on join.
+//
+//   tsx scripts/probe-persist.ts
+
 import WebSocket from "ws";
+
+interface StateMsg {
+  t: "state";
+  state: {
+    phase: string;
+    players: unknown[];
+  };
+}
+
+type ProbeMsg =
+  | StateMsg
+  | { t: string; state?: StateMsg["state"]; [k: string]: unknown };
 
 const ws = new WebSocket("ws://localhost:3001/ws");
 const clientId = `probe-${Math.random().toString(36).slice(2, 8)}`;
@@ -17,21 +32,20 @@ ws.on("open", () => {
 });
 
 let received = 0;
-ws.on("message", (data) => {
+ws.on("message", (data: WebSocket.RawData) => {
   received++;
-  const msg = JSON.parse(data.toString());
-  console.log(
-    "recv:",
-    msg.t,
-    msg.state ? `phase=${msg.state.phase} players=${msg.state.players.length}` : ""
-  );
+  const msg = JSON.parse(data.toString()) as ProbeMsg;
+  const suffix = msg.state
+    ? `phase=${msg.state.phase} players=${msg.state.players.length}`
+    : "";
+  console.log("recv:", msg.t, suffix);
   if (received >= 2) {
     ws.close();
     setTimeout(() => process.exit(0), 100);
   }
 });
 
-ws.on("error", (e) => {
+ws.on("error", (e: Error) => {
   console.error("ws error", e.message);
   process.exit(1);
 });

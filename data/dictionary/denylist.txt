@@ -319,3 +319,153 @@ saz
 pia
 ibm
 tim
+
+# ---------------------------------------------------------------------
+# 3-letter triage pass (May 2026)
+# ---------------------------------------------------------------------
+# Reviewed every 3-letter entry in the shipped dictionary. Denied
+# entries that meet ANY of:
+#   - Wiktionary flags it as a deliberate misspelling
+#   - it's an initialism, domain abbreviation, or brand clipping
+#   - it's a foreign currency / weight / alphabet-letter name
+#   - it's a racial or ethnic slur
+#   - it's a chemistry/pharma code masquerading as a noun
+#   - it's a bare one- or two-word gloss with no English currency
+#     ("ake: forever", "mab: a slattern", "sid: sadiki")
+# Kept: anything a typical player recognizes on sight (bio, ilk, ire,
+# mom, mum, nay, nil, nix, pax, pol, rue, sub, too, ump, veg, yum, zit,
+# bad, boy, hit, run, son, war, wee, elk, oak, elm, ivy, owl, ant…).
+
+# Deliberate misspellings
+joo
+kar
+luv
+
+# Slurs / ethnic epithets
+jap
+nig
+wog
+
+# Initialisms and domain abbreviations
+cem
+dea
+dec
+deo
+des
+edu
+fbi
+gmo
+gpa
+iad
+loc
+nev
+nic
+nyc
+pel
+por
+sci
+sta
+
+# Pharma / chem codes
+och
+sux
+val
+viv
+xan
+
+# Foreign currency & weight units
+hao
+kat
+lev
+mon
+oka
+rai
+rei
+ser
+som
+yue
+zhu
+
+# Non-Latin alphabet letter names
+heh
+mem
+san
+yat
+
+# Bare-gloss dialect / obscure foreign nouns
+ake
+aya
+bab
+bex
+bim
+bix
+bok
+caf
+cin
+cuz
+dee
+dod
+dow
+dum
+eff
+een
+ern
+fet
+fou
+foy
+gan
+gro
+har
+hea
+hoa
+ibn
+ike
+ish
+jip
+kai
+kam
+kes
+kev
+lao
+laz
+lil
+luo
+mab
+mee
+mim
+mui
+muy
+nai
+nat
+nuh
+omi
+oma
+opa
+ope
+ott
+owt
+pak
+pau
+qin
+quo
+rin
+rog
+ron
+roy
+ryo
+ryu
+sav
+sei
+sho
+sid
+tak
+taz
+tol
+udo
+und
+vai
+wah
+wor
+yah
+yep
+zak
