@@ -7,4 +7,5 @@ data/dictionary/words.txt
 data/dictionary/definitions.json
 data/dictionary/inflections.json
 server/admin/assets/app.js
+docs/site
 .kiro

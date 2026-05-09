@@ -126,6 +126,12 @@
   // Cell decorations derived from the path.
   const selSet = $derived(new Set($path));
   const last = $derived($path[$path.length - 1]);
+  // First cell of the path. Live play emphasizes the last cell (where
+  // the word ends, i.e. where the user's finger is). The results
+  // preview emphasizes the first cell instead so a click on a pill
+  // shows "here's where this word starts"; see the `.read-only`
+  // branch in board.css.
+  const first = $derived($path[0]);
   const adjSet = $derived(
     last !== undefined
       ? new Set(neighbors(last).filter((i) => !selSet.has(i)))
@@ -215,6 +221,7 @@
       class:placeholder={cell.placeholder}
       class:selected={selSet.has(cell.index)}
       class:last={cell.index === last}
+      class:first={cell.index === first}
       class:adjacent={adjSet.has(cell.index)}
       data-index={cell.index}
       aria-label={cell.placeholder ? "empty tile" : `letter ${cell.label}`}

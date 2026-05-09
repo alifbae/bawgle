@@ -3,7 +3,7 @@
 
 /**
  * Compile-time string injected by vite.config.js from the BAWGLE_ENVIRONMENT
- * env var. "development" unlocks window.bawgleDev; anything else is treated
- * as production and the dev-helpers module is tree-shaken out.
+ * env var. Read by Settings.svelte to relax the round-length slider
+ * minimum when set to "development"; unused otherwise.
  */
 declare const __BAWGLE_ENVIRONMENT__: string;

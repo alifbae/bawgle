@@ -47,8 +47,15 @@
   });
 
   // Wire/unwire input handling as we enter/leave the playing phase.
+  //
+  // IMPORTANT: depend *only* on the phase, not the whole room state.
+  // `$room` updates on every server message (score ticks, player
+  // ready flags, word results, etc.). If this effect re-ran on each
+  // of those, it would detach/reattach the pointer listeners mid-
+  // gesture and silently drop the user's drag state, which is the
+  // "tap-to-drag stops working intermittently" symptom.
+  const phase = $derived($room.state?.phase);
   $effect(() => {
-    const phase = $room.state?.phase;
     if (phase === "playing") {
       // Defer to next tick so the board element is mounted.
       queueMicrotask(() => {

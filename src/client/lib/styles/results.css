@@ -286,8 +286,10 @@
   pointer-events: none;
 }
 
-/* Chips become interactive on the results screen so users can hover
-   them to trace paths. Give a subtle cue on hover. */
+/* Result chips are interactive — click/tap pins a preview path on
+   the board and opens the definition tooltip. Subtle hover border is
+   just an interactivity affordance; the preview itself is click-
+   driven (removed hover-to-preview to avoid sub-element blink). */
 #results-body [data-word] {
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease;
@@ -298,8 +300,8 @@
   border-color: var(--c-accent);
 }
 
-/* Pinned chip (click/tap selected): stronger styling than hover so it
-   reads as persistent. Survives pointer-out. */
+/* Pinned chip (click/tap selected): stronger styling than the hover
+   affordance so it reads as persistent. */
 #results-body [data-word].is-active {
   border-color: var(--c-accent);
   background: color-mix(in srgb, var(--c-accent) 15%, var(--c-bg));

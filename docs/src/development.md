@@ -37,9 +37,10 @@ in `vite.config.js` if needed.
 All `BAWGLE_*` variables from `.env.example` apply in dev too. The
 noteworthy ones:
 
-- `BAWGLE_ENVIRONMENT=development` — set by `pnpm dev`. Unlocks:
-  - `window.bawgleDev` helpers in the browser console
-  - relaxed 5-second minimum round length (prod floor is 60)
+- `BAWGLE_ENVIRONMENT=development` — set by `pnpm dev`. Relaxes the
+  minimum round length from the 60s prod floor to 5s so you can end
+  rounds quickly while iterating. Accepted by both the server (clamp
+  logic) and the client (slider min).
 - `BAWGLE_ADMIN_PASS` — if empty the admin surface returns 401 for
   every request, so set something locally if you want to poke at it.
 - `BAWGLE_ALLOWED_ORIGINS` — leave unset in dev. The WebSocket origin
@@ -91,7 +92,6 @@ src/
     main.ts        Mounts App.svelte into <body>
     App.svelte     Path-based router (/, /result, 404)
     style.css      Entry CSS that imports lib/styles/*
-    dev-helpers.ts Dev-only window.bawgleDev helpers (tree-shaken in prod)
     lib/
       components/  Leaf components (Board, PlayerList, Timer, …)
       views/       Top-level views (Room, ResultPage, NotFound)
@@ -129,15 +129,6 @@ A few patterns worth knowing:
 - `tests/server/netcode.test.ts` spins up the server on ephemeral
   ports so rate-limit + heartbeat behaviour can be exercised over
   real WebSockets.
-
-## Client dev helpers (`window.bawgleDev`)
-
-When `BAWGLE_ENVIRONMENT=development`, `src/dev-helpers.ts` is
-imported at runtime and installs helpers on `window.bawgleDev` for
-prodding the UI from the browser console — useful for iterating on
-layouts without waiting for a real round to end. The import is
-guarded by a compile-time constant (`__BAWGLE_ENVIRONMENT__`) so the
-whole module is tree-shaken from production bundles.
 
 ## Editing the dictionary
 

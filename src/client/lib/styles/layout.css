@@ -1,5 +1,9 @@
 main {
-  max-width: 640px;
+  /* Paired with the 16px root in base.css. Kept as a hard px cap
+     (instead of rem) so a user bumping their browser's base size
+     scales the type inside but doesn't widen the column beyond
+     what reads comfortably on a laptop. */
+  max-width: 580px;
   margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
   display: flex;

@@ -54,6 +54,31 @@ jobs:
       - name: Test
         run: pnpm test
 
+  # Markdown linting for docs/src. Runs independently so docs
+  # breakage surfaces in PRs but never blocks the image publish.
+  docs-lint:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint docs
+        run: pnpm docs:lint
+
   publish:
     # Gate publishing behind tests, and only run on pushes — not on PRs
     # (we don't want forks or automated PRs to push images to our

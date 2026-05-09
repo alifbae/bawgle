@@ -1,7 +1,11 @@
 <!--
   Floating Wiktionary definition tooltip for result-screen chips.
-  Attaches delegated pointer/keyboard listeners on its root so every
-  `.chip[data-word]` inside triggers a lookup without per-chip wiring.
+  Attaches delegated click + keyboard listeners on its root so every
+  `.chip[data-word]` inside toggles a lookup on tap/click without
+  per-chip wiring. Hover does not open the tooltip — the preview
+  board and the definition are both click-driven to match tap
+  behaviour and avoid the sub-element-hop flicker that plagued the
+  hover path.
   Caches responses in-memory so repeated taps don't re-fetch.
 -->
 <script lang="ts">
@@ -27,8 +31,6 @@
   let data: DefinitionResponse | null = $state(null);
   let currentWord: string = $state("");
 
-  let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-
   onMount(() => {
     if (!rootEl) return;
 
@@ -45,41 +47,6 @@
       }
     };
 
-    const onOver = (e: MouseEvent) => {
-      const chip = (e.target as HTMLElement | null)?.closest<HTMLElement>(
-        ".chip[data-word]",
-      );
-      if (!chip) return;
-      // Moving between sub-elements of the same chip (text node →
-      // <sup>) re-fires mouseover with the same closest chip. Skip
-      // those so the 250ms hover timer doesn't keep resetting.
-      if (activeChip === chip) return;
-      clearHoverTimer();
-      hoverTimer = setTimeout(() => showFor(chip), 250);
-    };
-
-    const onOut = (e: MouseEvent) => {
-      const chip = (e.target as HTMLElement | null)?.closest<HTMLElement>(
-        ".chip[data-word]",
-      );
-      if (!chip) return;
-      // Ignore chip-to-chip transitions AND sub-element hops within
-      // the same chip: they're not a true "leave", and clearing the
-      // timer here made the tooltip never open when the chip text
-      // spanned multiple sub-nodes (missed-words row was worst).
-      const next = e.relatedTarget instanceof Element
-        ? e.relatedTarget.closest<HTMLElement>(".chip[data-word]")
-        : null;
-      if (next) return;
-      clearHoverTimer();
-      if (!activeChip) return;
-      if (activeChip === chip) {
-        setTimeout(() => {
-          if (activeChip === chip) hide();
-        }, 120);
-      }
-    };
-
     const onOutsideClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
@@ -91,27 +58,15 @@
     const onScroll = () => hide();
 
     rootEl.addEventListener("click", onClick);
-    rootEl.addEventListener("mouseover", onOver);
-    rootEl.addEventListener("mouseout", onOut);
     document.addEventListener("click", onOutsideClick);
     window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       rootEl.removeEventListener("click", onClick);
-      rootEl.removeEventListener("mouseover", onOver);
-      rootEl.removeEventListener("mouseout", onOut);
       document.removeEventListener("click", onOutsideClick);
       window.removeEventListener("scroll", onScroll);
-      clearHoverTimer();
     };
   });
-
-  function clearHoverTimer(): void {
-    if (hoverTimer) {
-      clearTimeout(hoverTimer);
-      hoverTimer = null;
-    }
-  }
 
   function hide(): void {
     activeChip = null;

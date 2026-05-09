@@ -2,7 +2,8 @@ import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 // Surface BAWGLE_ENVIRONMENT to the client bundle as a compile-time string.
-// `development` turns on window.bawgleDev helpers; anything else strips them.
+// `development` lets the Settings slider drop its minimum to 5s for fast
+// iteration; production keeps the 60s floor.
 const environment = process.env.BAWGLE_ENVIRONMENT || "production";
 
 export default defineConfig({
@@ -12,6 +13,10 @@ export default defineConfig({
     __BAWGLE_ENVIRONMENT__: JSON.stringify(environment),
   },
   server: {
+    // Bind to 0.0.0.0 in dev so phones / tablets on the same LAN can
+    // hit the app at http://<dev-machine-ip>:5175. Vite prints both
+    // the local and network URLs on startup.
+    host: true,
     port: 5175,
     proxy: {
       "/ws": {
