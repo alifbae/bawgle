@@ -54,14 +54,6 @@
           connectAndJoin({ code: initialRoomCode, name: storedName });
         }
       }
-
-      // Dev-only helpers. `__BAWGLE_ENVIRONMENT__` is a compile-time
-      // string; the dynamic import is tree-shaken from production.
-      if (__BAWGLE_ENVIRONMENT__ === "development") {
-        void import("./dev-helpers.ts").then(({ installDevHelpers }) =>
-          installDevHelpers(),
-        );
-      }
     }
   });
 

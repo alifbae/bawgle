@@ -1,5 +1,3 @@
-
-
 ## TL;DR
 
 Bawgle is a self-hosted, single-container multiplayer Boggle game.

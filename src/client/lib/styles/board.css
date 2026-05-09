@@ -11,7 +11,9 @@
   gap: 8px;
   aspect-ratio: 1;
   width: 100%;
-  max-width: 480px;
+  /* Paired with the 580px content column (layout.css) and the 16px
+     root (base.css) so the board doesn't dominate the column. */
+  max-width: 420px;
   padding: 0;
   background: transparent;
   border: 0;
@@ -96,6 +98,7 @@
   transition:
     inset 80ms ease,
     box-shadow 80ms ease,
+    background 120ms ease,
     transform 80ms ease;
 }
 
@@ -145,7 +148,22 @@
   text-shadow: 0 1px 0 color-mix(in srgb, #fff 25%, transparent);
 }
 
+/* Accent ring on a path endpoint. During live play we emphasise the
+   LAST cell (where the user's finger / typed caret is, i.e. where
+   the word ends). In the read-only results preview we flip the
+   emphasis to the FIRST cell — clicking a pill should show where
+   that word starts, which reads more naturally than "where does
+   this word end". */
 .die.selected.last .cap-top {
+  outline: 2px solid var(--c-fg);
+  outline-offset: -4px;
+}
+
+.board.read-only .die.selected.last .cap-top {
+  outline: none;
+}
+
+.board.read-only .die.selected.first .cap-top {
   outline: 2px solid var(--c-fg);
   outline-offset: -4px;
 }

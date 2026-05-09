@@ -249,11 +249,15 @@
         <PublicRooms
           onPick={(code) => {
             joinCode = code;
-            // If the user already has a name typed, skip the extra
-            // tap — go straight into the room. Clicking a row with
-            // a name in the field is an unambiguous "join this one."
+            // One-tap join when a name is already typed — no extra
+            // button press, no fumbling on mobile. Without a name
+            // we can't proceed, so surface the same name-missing
+            // error the manual "join room" button shows instead of
+            // silently dropping the click.
             if (name) {
               submitJoin();
+            } else {
+              flagMissingName();
             }
           }}
           onHostRequest={() => selectTab("host")}

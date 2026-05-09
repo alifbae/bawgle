@@ -44,6 +44,12 @@ interface Room {
   // Timestamp the current round started; preserved for persistence
   // into the rounds table so share links show accurate timing.
   roundStartedAt: number | null;
+  // Wall-clock time of the last user-initiated message the room
+  // handlers processed (join/leave/ready/settings/start/word/lobby).
+  // Distinct from storage `updated_at` (which also bumps on passive
+  // emits like state re-broadcasts) and from `conns.size > 0` (which
+  // can be a zombie tab). Feeds the lobby-idle sweep.
+  lastActivityAt: number;
 }
 
 const rooms = new Map<string, Room>();
@@ -62,9 +68,23 @@ const MAX_PLAYERS_PER_ROOM = 32;
 // meaningful change (join, leave, word, phase transition, settings),
 // so "no persist" really does mean "nobody touched it".
 const ROOM_TTL_MS = 72 * 60 * 60 * 1000;
+// Rooms parked in the lobby are closed much sooner than the full
+// 72h TTL. An open WebSocket alone is NOT activity: a user can leave
+// their tab inactive and the socket will stay alive indefinitely,
+// keeping the room in the public listing and confusing players who
+// try to join something nobody's actually at. "Activity" is any
+// message the room handlers act on — join/leave, ready toggle,
+// settings change, start, word, lobby transition. `roundStartedAt`
+// being non-null (playing / results) exempts a room from this
+// shorter TTL entirely; only lobby-phase idleness counts.
+const LOBBY_IDLE_TTL_MS = 30 * 60 * 1000;
 // How often the sweeper runs. Hourly keeps expired rooms from lingering
 // much past their TTL while keeping the wake-up overhead negligible.
+// The lobby-idle sweep wants finer granularity so a 30-minute rule
+// doesn't leak up to an extra hour before acting; we run it every
+// minute, which is still nearly free.
 const ROOM_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const LOBBY_IDLE_SWEEP_INTERVAL_MS = 60 * 1000;
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10);
@@ -113,6 +133,14 @@ function publicState(room: Room): RoomState {
 }
 
 function persist(room: Room) {
+  // Any code path that ends in persist() is by definition a handler
+  // that acted on a user message (join/leave/ready/settings/start/
+  // word/lobby) or a server-driven game event (round start/end). All
+  // are "activity" for the purposes of the lobby-idle sweep. Passive
+  // broadcasts (state re-emits to a reconnecting socket) don't call
+  // persist — so they also don't reset the idle clock, which is
+  // exactly what we want.
+  room.lastActivityAt = Date.now();
   try {
     saveRoom({
       code: room.state.code,
@@ -154,6 +182,7 @@ function getOrCreateRoom(code: string): Room | null {
       originalHostId: null,
       lastRoundId: null,
       roundStartedAt: null,
+      lastActivityAt: Date.now(),
     };
     rooms.set(code, room);
     persist(room);
@@ -651,6 +680,14 @@ export function restoreRooms(): void {
       originalHostId: state.hostId,
       lastRoundId: lastRound?.id ?? null,
       roundStartedAt: null,
+      // On restore we can't know the pre-crash activity clock — use
+      // now(), so a room that was idle in the lobby at crash time
+      // gets a fresh 30m window to rejoin before being closed. This
+      // is intentionally lenient: the alternative (use updated_at
+      // from storage) can falsely kill a room that was actively in
+      // use right up to the crash just because persist's timestamp
+      // is seconds old.
+      lastActivityAt: Date.now(),
     };
     rooms.set(code, room);
 
@@ -700,23 +737,109 @@ export function sweepStaleRooms(now: number = Date.now()): number {
 }
 
 /**
- * Kick off the periodic sweeper. The returned timer is `unref()`ed so
- * it doesn't keep the event loop alive during shutdown. Idempotent-ish:
- * caller should hold onto the handle if they want to stop it.
+ * Close a room forcibly: notify any still-connected sockets, drop
+ * the in-memory record, and delete the persisted row. Used by the
+ * sweepers. Separate from `purgeRoom` so the sweep paths can record
+ * a distinct `reason` for observability.
  */
-export function startRoomSweeper(): NodeJS.Timeout {
+function closeRoom(code: string, reason: string): void {
+  const room = rooms.get(code);
+  if (!room) return;
+  if (room.timer) {
+    clearTimeout(room.timer);
+    room.timer = null;
+  }
+  // Best-effort notify + terminate any zombie sockets so the client
+  // knows the room is gone and doesn't keep trying to resubscribe
+  // against a dead code.
+  for (const { ws } of room.conns.values()) {
+    try {
+      if (ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({ t: "error", message: "room closed" }));
+      }
+    } catch {
+      /* socket already half-closed */
+    }
+    try {
+      ws.terminate();
+    } catch {
+      /* already gone */
+    }
+  }
+  room.conns.clear();
+  rooms.delete(code);
+  deleteRoom(code);
+  recordEvent("room_purged", { code, reason });
+}
+
+/**
+ * Evict rooms that are parked in the lobby with no recent activity.
+ * Unlike `sweepStaleRooms` this does NOT spare rooms with live WS
+ * connections — a stale tab is precisely what this sweep is for.
+ * Only lobby-phase rooms are considered: rooms mid-play or showing
+ * results are always spared (they have their own natural lifetime
+ * and the 72h TTL catches them after that).
+ *
+ * Returns the number of rooms closed.
+ */
+export function sweepIdleLobbyRooms(now: number = Date.now()): number {
+  const stale: string[] = [];
+  for (const room of rooms.values()) {
+    if (room.state.phase !== "lobby") continue;
+    if (now - room.lastActivityAt < LOBBY_IDLE_TTL_MS) continue;
+    stale.push(room.state.code);
+  }
+  for (const code of stale) closeRoom(code, "lobby_idle");
+  if (stale.length > 0) {
+    const mins = Math.round(LOBBY_IDLE_TTL_MS / 60_000);
+    console.log(
+      `[bawgle] sweep: purged ${stale.length} lobby room(s) idle >${mins}m at ${new Date(now).toISOString()}`
+    );
+  }
+  return stale.length;
+}
+
+/**
+ * Kick off the periodic sweepers. Two schedules run in parallel:
+ *
+ *   - `sweepStaleRooms`: hourly, evicts rooms with no persisted
+ *     activity in >72h, sparing any with a live connection.
+ *   - `sweepIdleLobbyRooms`: minutely, evicts rooms parked in the
+ *     lobby with no recent activity in >30min, ignoring live
+ *     connections (they're the whole point — zombie tabs).
+ *
+ * Both returned timers are `unref()`ed so they don't keep the event
+ * loop alive during shutdown. Callers should hold onto both if they
+ * want to stop them.
+ */
+export function startRoomSweeper(): {
+  staleTimer: NodeJS.Timeout;
+  lobbyTimer: NodeJS.Timeout;
+} {
   // Sweep once at boot so rooms that expired while the process was
   // down get cleaned up immediately instead of lingering for an hour.
   sweepStaleRooms();
-  const handle = setInterval(() => {
+  sweepIdleLobbyRooms();
+
+  const staleTimer = setInterval(() => {
     try {
       sweepStaleRooms();
     } catch (err) {
       console.error(`[bawgle] sweep failed:`, err);
     }
   }, ROOM_SWEEP_INTERVAL_MS);
-  handle.unref();
-  return handle;
+  staleTimer.unref();
+
+  const lobbyTimer = setInterval(() => {
+    try {
+      sweepIdleLobbyRooms();
+    } catch (err) {
+      console.error(`[bawgle] lobby-idle sweep failed:`, err);
+    }
+  }, LOBBY_IDLE_SWEEP_INTERVAL_MS);
+  lobbyTimer.unref();
+
+  return { staleTimer, lobbyTimer };
 }
 
 /** Exposed for tooling/admin; drops a room everywhere. */

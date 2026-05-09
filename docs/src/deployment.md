@@ -45,7 +45,7 @@ the daily JSONL event logs.
 | `BAWGLE_ADMIN_PASS` | _unset_ | Empty disables the admin surface entirely |
 | `BAWGLE_ALLOWED_ORIGINS` | _unset_ | Comma-separated origin allowlist for WS upgrades |
 | `BAWGLE_TRUST_PROXY` | _unset_ | `1` enables trust of `X-Forwarded-For` / `X-Real-IP` |
-| `BAWGLE_ENVIRONMENT` | `production` | `development` unlocks dev-only behaviour |
+| `BAWGLE_ENVIRONMENT` | `production` | `development` relaxes the round-length minimum (60s → 5s) for fast local iteration |
 | `TZ` | _unset_ | Compose sets `America/Toronto` by default for log timestamps |
 
 `BAWGLE_TRUST_PROXY=1` is **only** safe when a trusted reverse proxy

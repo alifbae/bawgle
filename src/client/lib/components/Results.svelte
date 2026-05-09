@@ -38,6 +38,21 @@
   );
   const topScore = $derived(sorted[0]?.score ?? 0);
 
+  // Players to render. Zero-score rows clutter the scoreboard and
+  // drown out the actual results, so drop them. Two guarded
+  // exceptions:
+  //   - "me" always stays visible so a player can't look at their own
+  //     results screen and find themselves missing (worst case: the
+  //     row reads as their name with a 0 next to it, which is
+  //     accurate feedback).
+  //   - if every player scored 0 (dictionary rejected everything, or
+  //     a 5s dev round ended before anyone typed) we show everyone so
+  //     the page doesn't look broken.
+  const visiblePlayers = $derived.by(() => {
+    if (topScore === 0) return sorted;
+    return sorted.filter((p) => p.score > 0 || p.id === meId);
+  });
+
   // Word-frequency map across players: star chips found by only one player.
   const wordCounts = $derived.by(() => {
     const m = new Map<string, number>();
@@ -71,18 +86,32 @@
   }
 
   // Chip click/tap → pin the path highlight. pointerdown (not click)
-  // so the board lights up the instant the finger lands and so Safari
-  // doesn't swallow the interaction on micro-movement during a tap.
+  // so the board lights up the instant the finger lands and doesn't
+  // wait for Safari to decide whether the tap "counts" as a click.
+  //
+  // IMPORTANT: we only act on chip hits here. Clearing the pin on
+  // pointerdown anywhere else would kill the selection the moment a
+  // user starts a scroll gesture on mobile — touching a chip, then
+  // dragging up to read it, used to wipe the highlight before the
+  // finger even moved. Non-chip dismissal lives in `onRootClick`
+  // where the browser only fires the event if the touch actually
+  // ended as a click (iOS suppresses click on scroll/drag).
   function onRootPointerDown(e: PointerEvent): void {
     const target = e.target as HTMLElement | null;
     const chip = target?.closest<HTMLElement>("[data-word]");
     if (chip) {
       pinnedWord = chip.getAttribute("data-word");
-      return;
     }
-    // Tapping the preview board itself (to inspect the highlighted
-    // path) shouldn't clear the pin — only tapping a non-interactive
-    // area inside the results region does.
+  }
+
+  function onRootClick(e: MouseEvent): void {
+    const target = e.target as HTMLElement | null;
+    // Chip clicks are already handled by pointerdown (pin) and by
+    // DefinitionTooltip's delegated click (tip toggle). Let them
+    // through without resetting the pin.
+    if (target?.closest("[data-word]")) return;
+    // Let taps on the preview board slide through — the user is
+    // inspecting the highlighted path, not dismissing it.
     if (target?.closest(".results-board-wrap")) return;
     pinnedWord = null;
   }
@@ -114,6 +143,7 @@
   role="region"
   aria-label="Results"
   onpointerdown={onRootPointerDown}
+  onclick={onRootClick}
   onkeydown={(e) => {
     if (e.key === "Escape") pinnedWord = null;
   }}
@@ -126,7 +156,7 @@
     />
   {/if}
 
-  {#each sorted as p (p.id)}
+  {#each visiblePlayers as p (p.id)}
     {@const isWinner = p.score === topScore && topScore > 0}
     {@const isMe = !!meId && p.id === meId}
     <div
