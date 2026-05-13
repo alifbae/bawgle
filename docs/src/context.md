@@ -188,7 +188,7 @@ as long as they have no live socket.
 `data/dictionary/`:
 
 - `words.txt` — one word per line, lowercase, ≥3 chars, `[a-z]+` only
-- `denylist.txt` — words to strip; `scripts/apply-denylist.mjs`
+- `denylist.txt` — words to strip; `scripts/apply-denylist.ts`
   rewrites `words.txt`
 - `definitions.json` — `{ word: [{ pos, def }, ...] }`
 - `inflections.json` — `{ inflected: lemma }`
@@ -307,12 +307,12 @@ Vitest. `pnpm test` runs everything. Patterns:
 
 ## Scripts worth knowing
 
-- `scripts/apply-denylist.mjs` — rebuild `words.txt` from denylist
+- `scripts/apply-denylist.ts` — rebuild `words.txt` from denylist
 - `scripts/build-dictionary.ts` — (re)generate the dictionary files
   from source lists; see the script for input format
 - `scripts/verify-solver.ts` — sanity-check the Boggle solver
   against a known fixture
-- `scripts/probe-hold.mjs` / `probe-persist.mjs` — throwaway WS
+- `scripts/probe-hold.ts` / `probe-persist.ts` — throwaway WS
   probes used while debugging; kept for next time something breaks
 
 ## Documentation neighbours
