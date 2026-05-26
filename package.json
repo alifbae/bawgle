@@ -31,9 +31,9 @@
   "dependencies": {
     "@hono/node-server": "^1.13.0",
     "better-sqlite3": "^11.3.0",
-    "hono": "^4.6.0",
-    "tsx": "^4.19.0",
-    "ws": "^8.18.0"
+    "hono": "^4.12.23",
+    "tsx": "^4.22.3",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
