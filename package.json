@@ -29,7 +29,7 @@
     "compose:prod:logs": "docker compose logs -f"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.0",
+    "@hono/node-server": "^2.0.4",
     "better-sqlite3": "^11.3.0",
     "hono": "^4.6.0",
     "tsx": "^4.19.0",
